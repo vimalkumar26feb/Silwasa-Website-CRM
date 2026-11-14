@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { X, Sparkles, Send, CheckCircle, ArrowRight } from 'lucide-react';
 import { Button } from './Button';
 
@@ -17,18 +18,23 @@ interface PopupData {
   triggerType: 'timer' | 'scroll' | 'exit';
   delaySeconds: number;
   scrollPercentage: number;
+  imageUrl?: string;
 }
 
 export function PromotionalPopup() {
+  const pathname = usePathname();
   const [data, setData] = useState<PopupData | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // CRITICAL: Never show promotional popup on administrative dashboard routes
+  const isAdminRoute = !pathname || pathname.startsWith('/admin');
+
   useEffect(() => {
-    // Only check on client side and if not already dismissed in this session
-    if (typeof window === 'undefined') return;
+    // Only check on client side, for non-admin routes, and if not already dismissed in this session
+    if (typeof window === 'undefined' || isAdminRoute) return;
     if (sessionStorage.getItem('silwasa_popup_dismissed')) return;
 
     async function fetchPopupConfig() {
@@ -47,10 +53,10 @@ export function PromotionalPopup() {
     }
 
     fetchPopupConfig();
-  }, []);
+  }, [isAdminRoute]);
 
   useEffect(() => {
-    if (!data || !data.isEnabled) return;
+    if (isAdminRoute || !data || !data.isEnabled) return;
     if (sessionStorage.getItem('silwasa_popup_dismissed')) return;
 
     if (data.triggerType === 'timer') {
@@ -88,7 +94,7 @@ export function PromotionalPopup() {
       document.addEventListener('mouseleave', handleMouseLeave);
       return () => document.removeEventListener('mouseleave', handleMouseLeave);
     }
-  }, [data]);
+  }, [data, isAdminRoute]);
 
   const handleDismiss = () => {
     setIsOpen(false);
@@ -115,33 +121,48 @@ export function PromotionalPopup() {
     }
   };
 
-  if (!isOpen || !data) return null;
+  if (isAdminRoute || !isOpen || !data) return null;
 
   return (
     <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="relative w-full max-w-lg p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-[#1C1B1B] via-[#241a2e] to-[#1C1B1B] border border-[#663399]/60 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-lg p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-[#1C1B1B] via-[#241a2e] to-[#1C1B1B] border border-[#663399]/60 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200 overflow-hidden">
         {/* Close Button */}
         <button
           onClick={handleDismiss}
-          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#151414] border border-[#2A2B28] flex items-center justify-center text-white/60 hover:text-white transition"
+          className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-[#151414]/90 backdrop-blur-md border border-[#2A2B28] flex items-center justify-center text-white/70 hover:text-white transition shadow-lg"
           aria-label="Close dialog"
         >
           <X className="w-4 h-4" />
         </button>
 
-        {/* Badge */}
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#D9F45F]/15 text-[#D9F45F] border border-[#D9F45F]/30">
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>{data.badge || 'SPECIAL OFFER'}</span>
-        </div>
+        {/* Optional Custom Image Banner */}
+        {data.imageUrl ? (
+          <div className="relative aspect-[16/8] sm:aspect-[16/7] w-full rounded-2xl overflow-hidden border border-[#2A2B28] bg-[#151414]">
+            <img
+              src={data.imageUrl}
+              alt={data.title}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#1C1B1B] via-transparent to-transparent" />
+            <div className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#151414]/90 backdrop-blur-md text-[#D9F45F] border border-[#2A2B28]">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>{data.badge || 'SPECIAL OFFER'}</span>
+            </div>
+          </div>
+        ) : (
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#D9F45F]/15 text-[#D9F45F] border border-[#D9F45F]/30">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>{data.badge || 'SPECIAL OFFER'}</span>
+          </div>
+        )}
 
         {/* Title */}
-        <h3 className="text-2xl sm:text-3xl font-extrabold text-white leading-tight pr-6">
+        <h3 className="text-xl sm:text-2xl font-extrabold text-white leading-tight pr-6">
           {data.title}
         </h3>
 
         {/* Description */}
-        <p className="text-sm text-white/75 leading-relaxed">
+        <p className="text-xs sm:text-sm text-white/75 leading-relaxed">
           {data.description}
         </p>
 
@@ -161,7 +182,7 @@ export function PromotionalPopup() {
             {subscribed ? (
               <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 shrink-0" />
-                <span>Thank you! Your consultation pass has been reserved.</span>
+                <span>Thank you! Your access pass has been reserved.</span>
               </div>
             ) : (
               <form onSubmit={handleSubscribe} className="flex gap-2">
@@ -170,7 +191,7 @@ export function PromotionalPopup() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your corporate email..."
+                  placeholder="Enter your business email..."
                   className="flex-1 px-4 py-2.5 rounded-xl bg-[#151414] border border-[#2A2B28] text-white text-xs placeholder-white/30 focus:outline-none focus:border-[#D9F45F]"
                 />
                 <Button

@@ -19,6 +19,9 @@ import {
   Send,
   Eye,
   Sliders,
+  UploadCloud,
+  Image as ImageIcon,
+  Trash2,
 } from 'lucide-react';
 
 interface PopupSettings {
@@ -33,11 +36,13 @@ interface PopupSettings {
   triggerType: 'timer' | 'scroll' | 'exit';
   delaySeconds: number;
   scrollPercentage: number;
+  imageUrl?: string;
 }
 
 export default function AdminPopupsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -54,7 +59,33 @@ export default function AdminPopupsPage() {
     triggerType: 'timer',
     delaySeconds: 5,
     scrollPercentage: 35,
+    imageUrl: '',
   });
+
+  const handleImageUpload = async (file: File) => {
+    try {
+      setUploadingImage(true);
+      const data = new FormData();
+      data.append('file', file);
+      const token = typeof window !== 'undefined' ? sessionStorage.getItem('silwasa_token') : null;
+      const res = await fetch('http://localhost:5000/api/v1/admin/media/upload', {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include',
+        body: data,
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data?.url) {
+          setFormData((prev) => ({ ...prev, imageUrl: json.data.url }));
+        }
+      }
+    } catch {
+      // Ignore
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   useEffect(() => {
     async function loadPopups() {
@@ -270,6 +301,78 @@ export default function AdminPopupsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 space-y-4">
+              {/* Custom Popup Image */}
+              <div>
+                <label className="block text-xs font-semibold text-white/80 mb-1.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-[#D9F45F]" />
+                    Custom Popup Image / Banner (Optional)
+                  </span>
+                  {formData.imageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, imageUrl: '' })}
+                      className="text-[11px] text-rose-400 hover:text-rose-300 flex items-center gap-1 font-normal"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      Remove Image
+                    </button>
+                  )}
+                </label>
+
+                {formData.imageUrl ? (
+                  <div className="relative aspect-[16/7] w-full rounded-2xl overflow-hidden border border-[#2A2B28] bg-[#151414] group mb-2">
+                    <img
+                      src={formData.imageUrl}
+                      alt="Popup preview"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, imageUrl: '' })}
+                        className="px-3 py-1.5 rounded-lg bg-rose-500/80 text-white text-xs font-semibold flex items-center gap-1 hover:bg-rose-600 transition"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-xl border border-dashed border-[#2A2B28] bg-[#151414]/60 text-center space-y-2 mb-2">
+                    <div className="w-10 h-10 rounded-full bg-[#1C1B1B] border border-[#2A2B28] flex items-center justify-center mx-auto text-white/40">
+                      <UploadCloud className="w-5 h-5 text-[#D9F45F]" />
+                    </div>
+                    <div>
+                      <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#663399]/30 hover:bg-[#663399]/50 border border-[#663399]/50 text-white text-xs font-medium transition">
+                        <span>{uploadingImage ? 'Uploading Image...' : 'Upload Image File'}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          disabled={uploadingImage}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleImageUpload(file);
+                          }}
+                        />
+                      </label>
+                    </div>
+                    <p className="text-[11px] text-white/40">
+                      Supports PNG, JPG, WebP up to 5MB. Recommended aspect ratio 16:7 or 16:9.
+                    </p>
+                  </div>
+                )}
+
+                <Input
+                  type="url"
+                  placeholder="Or enter direct image URL (https://...)"
+                  value={formData.imageUrl || ''}
+                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                  className="text-xs"
+                />
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-white/80 mb-1">
@@ -373,13 +476,24 @@ export default function AdminPopupsPage() {
           </div>
 
           {/* Modal Mockup Container */}
-          <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-[#1C1B1B] via-[#241a2e] to-[#1C1B1B] border border-[#663399]/60 shadow-2xl relative space-y-4">
+          <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-[#1C1B1B] via-[#241a2e] to-[#1C1B1B] border border-[#663399]/60 shadow-2xl relative space-y-4 overflow-hidden">
             <div className="flex items-center justify-between">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#D9F45F]/15 text-[#D9F45F] border border-[#D9F45F]/30 flex items-center gap-1">
-                <Sparkles className="w-3 h-3" />
-                {formData.badge || 'PROMOTION'}
-              </span>
-              <span className="w-6 h-6 rounded-full bg-[#151414] border border-[#2A2B28] flex items-center justify-center text-white/40 text-xs">
+              {formData.imageUrl ? (
+                <div className="w-full relative aspect-[16/7] rounded-2xl overflow-hidden border border-[#2A2B28] bg-[#151414] mb-1">
+                  <img src={formData.imageUrl} alt="Banner Preview" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#1C1B1B] via-transparent to-transparent" />
+                  <div className="absolute bottom-2.5 left-2.5 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#151414]/90 backdrop-blur-md text-[#D9F45F] border border-[#2A2B28]">
+                    <Sparkles className="w-3 h-3" />
+                    <span>{formData.badge || 'PROMOTION'}</span>
+                  </div>
+                </div>
+              ) : (
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#D9F45F]/15 text-[#D9F45F] border border-[#D9F45F]/30 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" />
+                  {formData.badge || 'PROMOTION'}
+                </span>
+              )}
+              <span className="w-6 h-6 rounded-full bg-[#151414] border border-[#2A2B28] flex items-center justify-center text-white/40 text-xs shrink-0 ml-2">
                 ✕
               </span>
             </div>

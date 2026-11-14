@@ -291,21 +291,23 @@ export function Header() {
               <img
                 src={brandLogo}
                 alt="Silwasa IT Solutions"
-                className="h-10 w-auto max-w-[140px] object-contain rounded-lg"
+                className="h-10 w-auto max-w-[200px] object-contain rounded-lg"
               />
             ) : (
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#663399] to-[#8040bf] flex items-center justify-center text-white font-extrabold text-xl shadow-md shadow-[#663399]/20 group-hover:scale-105 transition-transform">
-                S
-              </div>
+              <>
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#663399] to-[#8040bf] flex items-center justify-center text-white font-extrabold text-xl shadow-md shadow-[#663399]/20 group-hover:scale-105 transition-transform">
+                  S
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xl font-extrabold text-white tracking-tight">
+                    Silwasa<span className="text-[#D9F45F]">.</span>
+                  </span>
+                  <span className="text-[10px] uppercase font-bold tracking-widest text-white/50 -mt-1">
+                    IT Solutions
+                  </span>
+                </div>
+              </>
             )}
-            <div className="flex flex-col">
-              <span className="text-xl font-extrabold text-white tracking-tight">
-                Silwasa<span className="text-[#D9F45F]">.</span>
-              </span>
-              <span className="text-[10px] uppercase font-bold tracking-widest text-white/50 -mt-1">
-                IT Solutions
-              </span>
-            </div>
           </Link>
 
           {/* Desktop Navigation */}

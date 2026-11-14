@@ -224,9 +224,21 @@ export default function AdminSettingsPage() {
                   <label className="block text-xs font-semibold text-white/90">
                     Primary Brand Logo
                   </label>
-                  {uploadingLogo && (
-                    <span className="text-[11px] text-[#D9F45F] animate-pulse">Uploading...</span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {uploadingLogo && (
+                      <span className="text-[11px] text-[#D9F45F] animate-pulse">Uploading...</span>
+                    )}
+                    {logoUrlVal && (
+                      <button
+                        type="button"
+                        onClick={() => setValue('logoUrl', '', { shouldDirty: true })}
+                        className="text-[11px] text-rose-400 hover:text-rose-300 flex items-center gap-1 font-normal transition"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Remove Logo
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -245,19 +257,31 @@ export default function AdminSettingsPage() {
                       className="w-full px-3 py-1.5 rounded-md bg-[#1C1B1B] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#663399]"
                       {...register('logoUrl')}
                     />
-                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#663399]/20 hover:bg-[#663399]/30 text-white text-xs font-medium cursor-pointer border border-[#663399]/40 transition">
-                      <UploadCloud className="w-3.5 h-3.5 text-[#D9F45F]" />
-                      <span>Upload Logo File</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleAssetUpload(file, 'logoUrl');
-                        }}
-                      />
-                    </label>
+                    <div className="flex items-center gap-2">
+                      <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#663399]/20 hover:bg-[#663399]/30 text-white text-xs font-medium cursor-pointer border border-[#663399]/40 transition">
+                        <UploadCloud className="w-3.5 h-3.5 text-[#D9F45F]" />
+                        <span>Upload Logo File</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleAssetUpload(file, 'logoUrl');
+                          }}
+                        />
+                      </label>
+                      {logoUrlVal && (
+                        <button
+                          type="button"
+                          onClick={() => setValue('logoUrl', '', { shouldDirty: true })}
+                          className="px-2.5 py-1.5 rounded-md bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 text-xs font-medium border border-rose-500/30 transition flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Clear</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -268,9 +292,21 @@ export default function AdminSettingsPage() {
                   <label className="block text-xs font-semibold text-white/90">
                     Browser Favicon (Siticon)
                   </label>
-                  {uploadingFavicon && (
-                    <span className="text-[11px] text-[#D9F45F] animate-pulse">Uploading...</span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {uploadingFavicon && (
+                      <span className="text-[11px] text-[#D9F45F] animate-pulse">Uploading...</span>
+                    )}
+                    {faviconUrlVal && (
+                      <button
+                        type="button"
+                        onClick={() => setValue('faviconUrl', '', { shouldDirty: true })}
+                        className="text-[11px] text-rose-400 hover:text-rose-300 flex items-center gap-1 font-normal transition"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Remove Favicon
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -289,19 +325,31 @@ export default function AdminSettingsPage() {
                       className="w-full px-3 py-1.5 rounded-md bg-[#1C1B1B] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#663399]"
                       {...register('faviconUrl')}
                     />
-                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#663399]/20 hover:bg-[#663399]/30 text-white text-xs font-medium cursor-pointer border border-[#663399]/40 transition">
-                      <UploadCloud className="w-3.5 h-3.5 text-[#D9F45F]" />
-                      <span>Upload Favicon File</span>
-                      <input
-                        type="file"
-                        accept="image/x-icon,image/png,image/svg+xml"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleAssetUpload(file, 'faviconUrl');
-                        }}
-                      />
-                    </label>
+                    <div className="flex items-center gap-2">
+                      <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#663399]/20 hover:bg-[#663399]/30 text-white text-xs font-medium cursor-pointer border border-[#663399]/40 transition">
+                        <UploadCloud className="w-3.5 h-3.5 text-[#D9F45F]" />
+                        <span>Upload Favicon File</span>
+                        <input
+                          type="file"
+                          accept="image/x-icon,image/png,image/svg+xml,image/jpeg"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleAssetUpload(file, 'faviconUrl');
+                          }}
+                        />
+                      </label>
+                      {faviconUrlVal && (
+                        <button
+                          type="button"
+                          onClick={() => setValue('faviconUrl', '', { shouldDirty: true })}
+                          className="px-2.5 py-1.5 rounded-md bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 text-xs font-medium border border-rose-500/30 transition flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Clear</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -369,9 +417,21 @@ export default function AdminSettingsPage() {
                   <label className="block text-xs font-semibold text-white/90">
                     Primary Brand Logo
                   </label>
-                  {uploadingLogo && (
-                    <span className="text-[11px] text-[#D9F45F] animate-pulse">Uploading...</span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {uploadingLogo && (
+                      <span className="text-[11px] text-[#D9F45F] animate-pulse">Uploading...</span>
+                    )}
+                    {logoUrlVal && (
+                      <button
+                        type="button"
+                        onClick={() => setValue('logoUrl', '', { shouldDirty: true })}
+                        className="text-[11px] text-rose-400 hover:text-rose-300 flex items-center gap-1 font-normal transition"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Remove Logo
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -390,19 +450,31 @@ export default function AdminSettingsPage() {
                       className="w-full px-3 py-1.5 rounded-md bg-[#1C1B1B] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#663399]"
                       {...register('logoUrl')}
                     />
-                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#663399]/20 hover:bg-[#663399]/30 text-white text-xs font-medium cursor-pointer border border-[#663399]/40 transition">
-                      <UploadCloud className="w-3.5 h-3.5 text-[#D9F45F]" />
-                      <span>Upload Logo File</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleAssetUpload(file, 'logoUrl');
-                        }}
-                      />
-                    </label>
+                    <div className="flex items-center gap-2">
+                      <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#663399]/20 hover:bg-[#663399]/30 text-white text-xs font-medium cursor-pointer border border-[#663399]/40 transition">
+                        <UploadCloud className="w-3.5 h-3.5 text-[#D9F45F]" />
+                        <span>Upload Logo File</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleAssetUpload(file, 'logoUrl');
+                          }}
+                        />
+                      </label>
+                      {logoUrlVal && (
+                        <button
+                          type="button"
+                          onClick={() => setValue('logoUrl', '', { shouldDirty: true })}
+                          className="px-2.5 py-1.5 rounded-md bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 text-xs font-medium border border-rose-500/30 transition flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Clear</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -413,9 +485,21 @@ export default function AdminSettingsPage() {
                   <label className="block text-xs font-semibold text-white/90">
                     Browser Favicon (Siticon)
                   </label>
-                  {uploadingFavicon && (
-                    <span className="text-[11px] text-[#D9F45F] animate-pulse">Uploading...</span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {uploadingFavicon && (
+                      <span className="text-[11px] text-[#D9F45F] animate-pulse">Uploading...</span>
+                    )}
+                    {faviconUrlVal && (
+                      <button
+                        type="button"
+                        onClick={() => setValue('faviconUrl', '', { shouldDirty: true })}
+                        className="text-[11px] text-rose-400 hover:text-rose-300 flex items-center gap-1 font-normal transition"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Remove Favicon
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -434,19 +518,31 @@ export default function AdminSettingsPage() {
                       className="w-full px-3 py-1.5 rounded-md bg-[#1C1B1B] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#663399]"
                       {...register('faviconUrl')}
                     />
-                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#663399]/20 hover:bg-[#663399]/30 text-white text-xs font-medium cursor-pointer border border-[#663399]/40 transition">
-                      <UploadCloud className="w-3.5 h-3.5 text-[#D9F45F]" />
-                      <span>Upload Favicon File</span>
-                      <input
-                        type="file"
-                        accept="image/x-icon,image/png,image/svg+xml"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleAssetUpload(file, 'faviconUrl');
-                        }}
-                      />
-                    </label>
+                    <div className="flex items-center gap-2">
+                      <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#663399]/20 hover:bg-[#663399]/30 text-white text-xs font-medium cursor-pointer border border-[#663399]/40 transition">
+                        <UploadCloud className="w-3.5 h-3.5 text-[#D9F45F]" />
+                        <span>Upload Favicon File</span>
+                        <input
+                          type="file"
+                          accept="image/x-icon,image/png,image/svg+xml,image/jpeg"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleAssetUpload(file, 'faviconUrl');
+                          }}
+                        />
+                      </label>
+                      {faviconUrlVal && (
+                        <button
+                          type="button"
+                          onClick={() => setValue('faviconUrl', '', { shouldDirty: true })}
+                          className="px-2.5 py-1.5 rounded-md bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 text-xs font-medium border border-rose-500/30 transition flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Clear</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

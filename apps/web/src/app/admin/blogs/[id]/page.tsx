@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect, useState, use } from 'react';
+import React, { useEffect, useState, useRef, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { apiClient, ApiError } from '../../../../lib/api';
+import { apiClient } from '../../../../lib/api';
 import type { BlogPost, SEOMetadata } from '@silwasa/types';
 import { slugify, estimateReadingTime } from '@silwasa/shared';
 import { Button } from '../../../../components/ui/Button';
@@ -23,16 +23,93 @@ import {
   Italic,
   Heading1,
   Heading2,
+  Heading3,
   List,
   ListOrdered,
+  Link as LinkIcon,
   Quote,
   Code,
-  Sparkles,
-  Search,
   Calendar,
   UploadCloud,
   FileText,
+  Layers,
+  Plus,
+  Type,
 } from 'lucide-react';
+
+interface BlogCategoryOption {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  _count?: { posts: number };
+}
+
+/**
+ * Smart Word and Google Docs HTML Cleaner
+ * Parses and preserves headings (H1-H4), paragraphs, bold, italic,
+ * bullet lists (ul/li), numbered lists (ol/li), and links, while stripping
+ * Microsoft Word XML, Mso classes, inline font junk, and empty tags.
+ */
+function cleanWordAndDocsHtml(rawHtml: string): string {
+  if (!rawHtml) return '';
+
+  let html = rawHtml;
+
+  // 1. Remove comments, styles, xml namespaces, head/meta tags
+  html = html.replace(/<!--[\s\S]*?-->/gi, '');
+  html = html.replace(/<style[\s\S]*?<\/style>/gi, '');
+  html = html.replace(/<xml[\s\S]*?<\/xml>/gi, '');
+  html = html.replace(/<head[\s\S]*?<\/head>/gi, '');
+  html = html.replace(/<meta[\s\S]*?>/gi, '');
+  html = html.replace(/<link[\s\S]*?>/gi, '');
+  html = html.replace(/<\/?o:[^>]*>/gi, '');
+  html = html.replace(/<\/?w:[^>]*>/gi, '');
+  html = html.replace(/<\/?m:[^>]*>/gi, '');
+  html = html.replace(/<\/?v:[^>]*>/gi, '');
+
+  // 2. Identify Word headings (Heading 1-4, MsoHeading, Title)
+  html = html.replace(/<p[^>]*class="?[^"]*(?:Heading\s*1|MsoHeading1|Title)[^"]*"?[^>]*>([\s\S]*?)<\/p>/gi, '<h1>$1</h1>');
+  html = html.replace(/<p[^>]*class="?[^"]*(?:Heading\s*2|MsoHeading2)[^"]*"?[^>]*>([\s\S]*?)<\/p>/gi, '<h2>$1</h2>');
+  html = html.replace(/<p[^>]*class="?[^"]*(?:Heading\s*3|MsoHeading3)[^"]*"?[^>]*>([\s\S]*?)<\/p>/gi, '<h3>$1</h3>');
+  html = html.replace(/<p[^>]*class="?[^"]*(?:Heading\s*4|MsoHeading4)[^"]*"?[^>]*>([\s\S]*?)<\/p>/gi, '<h4>$1</h4>');
+
+  // 3. Identify Word Lists (MsoListParagraph)
+  html = html.replace(/<p[^>]*class="?[^"]*MsoListParagraph[^"]*"?[^>]*>([\s\S]*?)<\/p>/gi, (_match, inner) => {
+    const isBullet = /mso-list:Ignore[^>]*>[·•\u2022\u25cf\u25aa\u25cb\-]/i.test(inner) || /^[·•\u2022\u25cf\u25aa\u25cb\-]\s*/.test(inner);
+    const cleanedInner = inner
+      .replace(/<span[^>]*style="?[^"]*mso-list:Ignore[^"]*"?[^>]*>[\s\S]*?<\/span>/gi, '')
+      .replace(/^[·•\u2022\u25cf\u25aa\u25cb\-]\s*/, '')
+      .replace(/^\d+[\.\)]\s*/, '')
+      .trim();
+    return `<!--${isBullet ? 'BULLET_ITEM' : 'NUMBERED_ITEM'}--><li>${cleanedInner}</li>`;
+  });
+
+  // Group consecutive list items into <ul> and <ol>
+  html = html.replace(/(?:<!--BULLET_ITEM--><li>[\s\S]*?<\/li>\s*)+/gi, (match) => {
+    return `<ul>\n${match.replace(/<!--BULLET_ITEM-->/g, '')}</ul>\n`;
+  });
+  html = html.replace(/(?:<!--NUMBERED_ITEM--><li>[\s\S]*?<\/li>\s*)+/gi, (match) => {
+    return `<ol>\n${match.replace(/<!--NUMBERED_ITEM-->/g, '')}</ol>\n`;
+  });
+
+  // 4. Strip span wrappers and dirty attributes, retaining clean tags
+  html = html.replace(/<\/?span[^>]*>/gi, '');
+  html = html.replace(/\s+class="[^"]*"/gi, '');
+  html = html.replace(/\s+style="[^"]*"/gi, '');
+  html = html.replace(/\s+lang="[^"]*"/gi, '');
+  html = html.replace(/\s+dir="[^"]*"/gi, '');
+  html = html.replace(/\s+align="[^"]*"/gi, '');
+  html = html.replace(/<b>/gi, '<strong>').replace(/<\/b>/gi, '</strong>');
+  html = html.replace(/<i>/gi, '<em>').replace(/<\/i>/gi, '</em>');
+
+  // 5. Clean empty tags and whitespace
+  html = html.replace(/<p>\s*&nbsp;\s*<\/p>/gi, '');
+  html = html.replace(/<p>\s*<\/p>/gi, '');
+  html = html.replace(/\n\s*\n\s*\n/g, '\n\n');
+
+  return html.trim();
+}
 
 export default function BlogEditorPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -43,9 +120,10 @@ export default function BlogEditorPage({ params }: { params: Promise<{ id: strin
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'content' | 'seo'>('content');
-  const [editorMode, setEditorMode] = useState<'code' | 'preview'>('code');
+  const [editorMode, setEditorMode] = useState<'visual' | 'code'>('visual');
   const [uploadingCover, setUploadingCover] = useState(false);
 
+  // Core Article Fields
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
   const [excerpt, setExcerpt] = useState('');
@@ -53,7 +131,13 @@ export default function BlogEditorPage({ params }: { params: Promise<{ id: strin
   const [featuredImageUrl, setFeaturedImageUrl] = useState('');
   const [isPublished, setIsPublished] = useState(false);
   const [publishedAt, setPublishedAt] = useState('');
-  const [categories, setCategories] = useState<string[]>([]);
+
+  // Categories & Tags
+  const [availableCategories, setAvailableCategories] = useState<BlogCategoryOption[]>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [newCatName, setNewCatName] = useState('');
+  const [creatingCat, setCreatingCat] = useState(false);
+  const [showAddCatInput, setShowAddCatInput] = useState(false);
   const [tagInput, setTagInput] = useState('');
 
   // SEO Form
@@ -69,16 +153,56 @@ export default function BlogEditorPage({ params }: { params: Promise<{ id: strin
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Refs for editors
+  const visualEditorRef = useRef<HTMLDivElement>(null);
+  const codeEditorRef = useRef<HTMLTextAreaElement>(null);
+
   // Reading time counter
-  const wordCount = content.trim() ? content.replace(/<[^>]*>/g, '').split(/\s+/).length : 0;
+  const wordCount = content.trim() ? content.replace(/<[^>]*>/g, '').split(/\s+/).filter(Boolean).length : 0;
   const computedReadingTime = estimateReadingTime(content);
 
+  // Sync content into visual editor when switching back to visual mode
+  useEffect(() => {
+    if (editorMode === 'visual' && visualEditorRef.current) {
+      if (visualEditorRef.current.innerHTML !== content) {
+        visualEditorRef.current.innerHTML = content || '';
+      }
+    }
+  }, [editorMode]);
+
+  // Load Categories list
+  useEffect(() => {
+    async function loadCategories() {
+      try {
+        const res = await apiClient<{ success: boolean; data: BlogCategoryOption[] }>('/blogs/categories');
+        if (res.success && res.data) {
+          setAvailableCategories(res.data);
+        }
+      } catch {
+        // Fallback demo categories if offline
+        setAvailableCategories([
+          { id: 'cat-1', name: 'Web Development', slug: 'web-development' },
+          { id: 'cat-2', name: 'Artificial Intelligence & GEO', slug: 'ai-solutions-geo' },
+          { id: 'cat-3', name: 'Software Architecture', slug: 'software-architecture' },
+          { id: 'cat-4', name: 'Mobile Engineering', slug: 'mobile-app-development' },
+          { id: 'cat-5', name: 'Technical SEO', slug: 'seo-services' },
+        ]);
+      }
+    }
+    loadCategories();
+  }, []);
+
+  // Load Existing Post
   useEffect(() => {
     if (isNew) {
       setTitle('');
       setSlug('');
       setExcerpt('');
-      setContent('<h2>Introduction</h2><p>Start writing your technical article or insights here...</p>');
+      const defaultContent = '<h2>Introduction</h2>\n<p>Start writing your technical article or insights here...</p>';
+      setContent(defaultContent);
+      if (visualEditorRef.current) {
+        visualEditorRef.current.innerHTML = defaultContent;
+      }
       return;
     }
 
@@ -91,7 +215,10 @@ export default function BlogEditorPage({ params }: { params: Promise<{ id: strin
           setTitle(p.title);
           setSlug(p.slug);
           setExcerpt(p.excerpt);
-          setContent(p.content);
+          setContent(p.content || '');
+          if (visualEditorRef.current) {
+            visualEditorRef.current.innerHTML = p.content || '';
+          }
           setFeaturedImageUrl(p.featuredImageUrl || '');
           setIsPublished(p.isPublished);
           if (p.publishedAt) {
@@ -100,11 +227,14 @@ export default function BlogEditorPage({ params }: { params: Promise<{ id: strin
             const localIso = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
             setPublishedAt(localIso);
           }
-          if (p.categories) {
-            setCategories(p.categories.map((c) => c.name || (c as any).category?.name || ''));
+          if (p.categories && Array.isArray(p.categories)) {
+            const ids = p.categories
+              .map((c: any) => c.categoryId || c.category?.id || c.id)
+              .filter(Boolean);
+            setSelectedCategoryIds(ids);
           }
-          if (p.tags) {
-            setTagInput(p.tags.map((t) => t.name || (t as any).tag?.name || '').join(', '));
+          if (p.tags && Array.isArray(p.tags)) {
+            setTagInput(p.tags.map((t: any) => t.name || t.tag?.name || '').filter(Boolean).join(', '));
           }
           if (p.seo) setSeo(p.seo);
         }
@@ -113,7 +243,11 @@ export default function BlogEditorPage({ params }: { params: Promise<{ id: strin
         setTitle('The Evolution of Generative Engine Optimization (GEO)');
         setSlug('generative-engine-optimization-guide');
         setExcerpt('Why traditional keywords are being replaced by entity authority and vector schemas in the AI search era.');
-        setContent('<h2>Understanding Entity Retrieval</h2><p>Generative search engines prioritize authoritative entity networks over plain keyword frequency. Here is how modern platforms must architect structured data.</p>');
+        const fallbackContent = '<h2>Understanding Entity Retrieval</h2>\n<p>Generative search engines prioritize authoritative entity networks over plain keyword frequency. Here is how modern platforms must architect structured data.</p>';
+        setContent(fallbackContent);
+        if (visualEditorRef.current) {
+          visualEditorRef.current.innerHTML = fallbackContent;
+        }
         setIsPublished(true);
       } finally {
         setLoading(false);
@@ -130,35 +264,198 @@ export default function BlogEditorPage({ params }: { params: Promise<{ id: strin
     }
   };
 
-  const handleInsertFormatting = (tag: string, endTag: string = '') => {
-    setContent((prev) => `${prev}\n${tag}Text${endTag || tag}\n`);
-  };
+  /**
+   * Formatting Toolbar Actions
+   * Executes commands on visual editor or wraps selection in code editor
+   */
+  const handleFormat = (command: string, arg?: string) => {
+    if (editorMode === 'visual') {
+      if (!visualEditorRef.current) return;
+      visualEditorRef.current.focus();
 
-  const handleCleanPasteFromWord = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-    const pastedHtml = e.clipboardData.getData('text/html');
-    if (pastedHtml && (pastedHtml.includes('MsoNormal') || pastedHtml.includes('urn:schemas-microsoft-com') || pastedHtml.includes('<p') || pastedHtml.includes('<h'))) {
-      e.preventDefault();
-      const cleaned = pastedHtml
-        .replace(/<!--[\s\S]*?-->/g, '')
-        .replace(/<style[\s\S]*?<\/style>/gi, '')
-        .replace(/<xml[\s\S]*?<\/xml>/gi, '')
-        .replace(/\s+class="[^"]*"/gi, '')
-        .replace(/\s+style="[^"]*"/gi, '')
-        .replace(/\s+lang="[^"]*"/gi, '')
-        .replace(/<\/?o:[^>]*>/gi, '')
-        .replace(/<\/?w:[^>]*>/gi, '')
-        .replace(/<\/?m:[^>]*>/gi, '')
-        .replace(/<\/?span[^>]*>/gi, '')
-        .replace(/<p>\s*&nbsp;\s*<\/p>/gi, '')
-        .replace(/<p>\s*<\/p>/gi, '')
-        .trim();
+      if (command === 'createLink') {
+        const url = window.prompt('Enter Hyperlink URL (e.g. https://silwasa.com):', 'https://');
+        if (url) {
+          document.execCommand('createLink', false, url);
+        }
+      } else if (command === 'formatBlock') {
+        document.execCommand('formatBlock', false, arg || '<p>');
+      } else {
+        document.execCommand(command, false, arg);
+      }
 
-      setContent((prev) => (prev ? `${prev}\n\n${cleaned}` : cleaned));
-      setSuccessMessage('Cleaned and auto-formatted pasted Microsoft Word/Docs content.');
-      setTimeout(() => setSuccessMessage(null), 3000);
+      // Sync state
+      setContent(visualEditorRef.current.innerHTML);
+    } else {
+      // Code mode: manipulate textarea selection
+      const textarea = codeEditorRef.current;
+      if (!textarea) return;
+
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const selected = textarea.value.substring(start, end);
+
+      let before = '';
+      let after = '';
+
+      switch (command) {
+        case 'bold':
+          before = '<strong>';
+          after = '</strong>';
+          break;
+        case 'italic':
+          before = '<em>';
+          after = '</em>';
+          break;
+        case 'h1':
+          before = '<h1>';
+          after = '</h1>';
+          break;
+        case 'h2':
+          before = '<h2>';
+          after = '</h2>';
+          break;
+        case 'h3':
+          before = '<h3>';
+          after = '</h3>';
+          break;
+        case 'p':
+          before = '<p>';
+          after = '</p>';
+          break;
+        case 'insertUnorderedList':
+          before = '<ul>\n  <li>';
+          after = '</li>\n</ul>';
+          break;
+        case 'insertOrderedList':
+          before = '<ol>\n  <li>';
+          after = '</li>\n</ol>';
+          break;
+        case 'createLink': {
+          const url = window.prompt('Enter Hyperlink URL:', 'https://');
+          if (url) {
+            before = `<a href="${url}">`;
+            after = '</a>';
+          }
+          break;
+        }
+        case 'quote':
+          before = '<blockquote>';
+          after = '</blockquote>';
+          break;
+        case 'code':
+          before = '<pre><code>';
+          after = '</code></pre>';
+          break;
+        default:
+          break;
+      }
+
+      const replacement = before + (selected || 'Text') + after;
+      const updated =
+        textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
+
+      setContent(updated);
+
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + before.length, start + before.length + (selected || 'Text').length);
+      }, 0);
     }
   };
 
+  /**
+   * Smart Clipboard Paste Handler (Word / Docs Cleaner)
+   */
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const pastedHtml = e.clipboardData.getData('text/html');
+    const pastedText = e.clipboardData.getData('text/plain');
+
+    if (pastedHtml) {
+      e.preventDefault();
+      const cleaned = cleanWordAndDocsHtml(pastedHtml);
+
+      if (editorMode === 'visual') {
+        document.execCommand('insertHTML', false, cleaned);
+        if (visualEditorRef.current) {
+          setContent(visualEditorRef.current.innerHTML);
+        }
+      } else {
+        const textarea = codeEditorRef.current;
+        if (!textarea) return;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const updated = textarea.value.substring(0, start) + cleaned + textarea.value.substring(end);
+        setContent(updated);
+      }
+
+      setSuccessMessage('Cleaned and auto-formatted pasted Microsoft Word/Docs document.');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } else if (pastedText && editorMode === 'visual') {
+      // Plain text paste: preserve paragraphs
+      e.preventDefault();
+      const paragraphs = pastedText
+        .split(/\n\s*\n/)
+        .map((p) => `<p>${p.trim().replace(/\n/g, '<br/>')}</p>`)
+        .join('\n');
+      document.execCommand('insertHTML', false, paragraphs);
+      if (visualEditorRef.current) {
+        setContent(visualEditorRef.current.innerHTML);
+      }
+    }
+  };
+
+  // Category toggle helper
+  const handleToggleCategory = (catId: string) => {
+    setSelectedCategoryIds((prev) =>
+      prev.includes(catId) ? prev.filter((id) => id !== catId) : [...prev, catId]
+    );
+  };
+
+  // Create new category inline
+  const handleCreateCategoryInline = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCatName.trim()) return;
+
+    try {
+      setCreatingCat(true);
+      const catSlug = slugify(newCatName);
+      const res = await apiClient<{ success: boolean; data: BlogCategoryOption }>('/admin/blogs/categories', {
+        method: 'POST',
+        body: {
+          name: newCatName.trim(),
+          slug: catSlug,
+          description: `Category for ${newCatName.trim()}`,
+        },
+      });
+
+      if (res.success && res.data) {
+        setAvailableCategories((prev) => [...prev, res.data]);
+        setSelectedCategoryIds((prev) => [...prev, res.data.id]);
+        setNewCatName('');
+        setShowAddCatInput(false);
+        setSuccessMessage(`Category "${res.data.name}" created and assigned.`);
+        setTimeout(() => setSuccessMessage(null), 3000);
+      }
+    } catch {
+      // Local fallback in workspace
+      const localCat: BlogCategoryOption = {
+        id: `cat-${Date.now()}`,
+        name: newCatName.trim(),
+        slug: slugify(newCatName),
+      };
+      setAvailableCategories((prev) => [...prev, localCat]);
+      setSelectedCategoryIds((prev) => [...prev, localCat.id]);
+      setNewCatName('');
+      setShowAddCatInput(false);
+      setSuccessMessage(`Category "${localCat.name}" added.`);
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } finally {
+      setCreatingCat(false);
+    }
+  };
+
+  // Cover image upload
   const handleCoverUpload = async (file: File) => {
     try {
       setUploadingCover(true);
@@ -184,8 +481,16 @@ export default function BlogEditorPage({ params }: { params: Promise<{ id: strin
     }
   };
 
+  // Save Post
   const handleSave = async (publishedState?: boolean) => {
-    if (!title.trim() || !slug.trim() || !content.trim()) {
+    // Sync current visual innerHTML into content before save if in visual mode
+    let finalContent = content;
+    if (editorMode === 'visual' && visualEditorRef.current) {
+      finalContent = visualEditorRef.current.innerHTML;
+      setContent(finalContent);
+    }
+
+    if (!title.trim() || !slug.trim() || !finalContent.trim()) {
       setErrorMessage('Please fill in Title, Slug, and Article Content.');
       return;
     }
@@ -204,11 +509,12 @@ export default function BlogEditorPage({ params }: { params: Promise<{ id: strin
         title,
         slug,
         excerpt: excerpt || title,
-        content,
+        content: finalContent,
         featuredImageUrl: featuredImageUrl || null,
         isPublished: targetPublished,
         publishedAt: publishedAt ? new Date(publishedAt).toISOString() : null,
         readingTimeMinutes: computedReadingTime,
+        categoryIds: selectedCategoryIds,
         tagNames,
         seo,
       };
@@ -227,11 +533,11 @@ export default function BlogEditorPage({ params }: { params: Promise<{ id: strin
           body: payload,
         });
         setIsPublished(targetPublished);
-        setSuccessMessage('Article saved successfully');
+        setSuccessMessage('Article saved successfully with updated categories and content.');
         setTimeout(() => setSuccessMessage(null), 3000);
       }
-    } catch (err: unknown) {
-      setSuccessMessage('Article updated in workspace');
+    } catch {
+      setSuccessMessage('Article updated in workspace.');
       setTimeout(() => setSuccessMessage(null), 3000);
     } finally {
       setSaving(false);
@@ -260,40 +566,45 @@ export default function BlogEditorPage({ params }: { params: Promise<{ id: strin
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold text-white tracking-tight">
-                {title || (isNew ? 'Draft New Post' : 'Edit Post')}
+                {isNew ? 'Create New Article' : title || 'Edit Article'}
               </h1>
               <Badge variant={isPublished ? 'success' : 'warning'}>
                 {isPublished ? 'Live' : 'Draft'}
               </Badge>
             </div>
-            <div className="text-xs text-white/50 font-mono">
-              /blog/{slug || 'untitled-post'}
-            </div>
+            <p className="text-xs text-white/50 font-mono mt-0.5">
+              {slug ? `silwasa.com/blog/${slug}` : 'Auto-generated URL slug'}
+            </p>
           </div>
         </div>
 
-        {/* Tab & Action Controls */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center rounded-xl bg-[#151414] border border-[#2A2B28] p-1">
+        {/* Action Controls */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Tabs: Content vs SEO */}
+          <div className="flex items-center p-1 rounded-xl bg-[#151414] border border-[#2A2B28] mr-2">
             <button
+              type="button"
               onClick={() => setActiveTab('content')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
                 activeTab === 'content'
                   ? 'bg-[#663399] text-white shadow'
                   : 'text-white/60 hover:text-white'
               }`}
             >
-              Article Content
+              <FileText className="w-3.5 h-3.5" />
+              Content
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('seo')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
                 activeTab === 'seo'
                   ? 'bg-[#663399] text-white shadow'
                   : 'text-white/60 hover:text-white'
               }`}
             >
-              SEO & Social Graph
+              <Eye className="w-3.5 h-3.5" />
+              SEO &amp; Social
             </button>
           </div>
 
@@ -398,9 +709,9 @@ export default function BlogEditorPage({ params }: { params: Promise<{ id: strin
 
                 {/* Rich Text Editor Container */}
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center justify-between mb-2">
                     <label className="block text-xs font-semibold text-white/70">
-                      Article Content (HTML / Markdown) *
+                      Article Content *
                     </label>
                     <span className="text-[11px] text-white/50 flex items-center gap-1 font-mono">
                       <Clock className="w-3 h-3 text-[#D9F45F]" />
@@ -409,113 +720,192 @@ export default function BlogEditorPage({ params }: { params: Promise<{ id: strin
                   </div>
 
                   {/* Formatting Toolbar */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-t-xl bg-[#151414] border border-[#2A2B28] border-b-0">
+                  <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-t-xl bg-[#151414] border border-[#2A2B28] border-b-0">
                     <div className="flex flex-wrap items-center gap-1">
+                      {/* Headings */}
                       <button
                         type="button"
-                        onClick={() => handleInsertFormatting('<strong>', '</strong>')}
-                        className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/70 hover:text-white"
-                        title="Bold"
+                        onClick={() => handleFormat('formatBlock', '<h1>')}
+                        className="px-2 py-1 rounded text-xs font-bold hover:bg-[#1C1B1B] text-white/80 hover:text-white transition flex items-center gap-1"
+                        title="Heading 1"
+                      >
+                        <Heading1 className="w-3.5 h-3.5 text-[#D9F45F]" />
+                        <span className="hidden sm:inline">H1</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleFormat('formatBlock', '<h2>')}
+                        className="px-2 py-1 rounded text-xs font-bold hover:bg-[#1C1B1B] text-white/80 hover:text-white transition flex items-center gap-1"
+                        title="Heading 2"
+                      >
+                        <Heading2 className="w-3.5 h-3.5 text-[#D9F45F]" />
+                        <span className="hidden sm:inline">H2</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleFormat('formatBlock', '<h3>')}
+                        className="px-2 py-1 rounded text-xs font-bold hover:bg-[#1C1B1B] text-white/80 hover:text-white transition flex items-center gap-1"
+                        title="Heading 3"
+                      >
+                        <Heading3 className="w-3.5 h-3.5 text-[#D9F45F]" />
+                        <span className="hidden sm:inline">H3</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleFormat('formatBlock', '<p>')}
+                        className="px-2 py-1 rounded text-xs font-medium hover:bg-[#1C1B1B] text-white/70 hover:text-white transition flex items-center gap-1"
+                        title="Paragraph"
+                      >
+                        <Type className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">P</span>
+                      </button>
+
+                      <div className="h-4 w-px bg-[#2A2B28] mx-1" />
+
+                      {/* Formatting: Bold & Italic */}
+                      <button
+                        type="button"
+                        onClick={() => handleFormat('bold')}
+                        className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/80 hover:text-white transition"
+                        title="Bold (Ctrl+B)"
                       >
                         <Bold className="w-4 h-4" />
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleInsertFormatting('<em>', '</em>')}
-                        className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/70 hover:text-white"
-                        title="Italic"
+                        onClick={() => handleFormat('italic')}
+                        className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/80 hover:text-white transition"
+                        title="Italic (Ctrl+I)"
                       >
                         <Italic className="w-4 h-4" />
                       </button>
+
+                      <div className="h-4 w-px bg-[#2A2B28] mx-1" />
+
+                      {/* Lists */}
                       <button
                         type="button"
-                        onClick={() => handleInsertFormatting('<h2>', '</h2>')}
-                        className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/70 hover:text-white"
-                        title="Heading 2"
-                      >
-                        <Heading1 className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleInsertFormatting('<h3>', '</h3>')}
-                        className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/70 hover:text-white"
-                        title="Heading 3"
-                      >
-                        <Heading2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleInsertFormatting('<ul>\n  <li>', '</li>\n</ul>')}
-                        className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/70 hover:text-white"
-                        title="Bullet List"
+                        onClick={() => handleFormat('insertUnorderedList')}
+                        className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/80 hover:text-white transition"
+                        title="Bullet List (Unordered)"
                       >
                         <List className="w-4 h-4" />
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleInsertFormatting('<ol>\n  <li>', '</li>\n</ol>')}
-                        className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/70 hover:text-white"
-                        title="Numbered List"
+                        onClick={() => handleFormat('insertOrderedList')}
+                        className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/80 hover:text-white transition"
+                        title="Numbered List (Ordered)"
                       >
                         <ListOrdered className="w-4 h-4" />
                       </button>
+
+                      <div className="h-4 w-px bg-[#2A2B28] mx-1" />
+
+                      {/* Link, Quote, Code */}
                       <button
                         type="button"
-                        onClick={() => handleInsertFormatting('<blockquote>', '</blockquote>')}
-                        className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/70 hover:text-white"
+                        onClick={() => handleFormat('createLink')}
+                        className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/80 hover:text-white transition"
+                        title="Insert Hyperlink"
+                      >
+                        <LinkIcon className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleFormat('formatBlock', '<blockquote>')}
+                        className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/80 hover:text-white transition"
                         title="Blockquote"
                       >
                         <Quote className="w-4 h-4" />
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleInsertFormatting('<pre><code>', '</code></pre>')}
-                        className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/70 hover:text-white"
+                        onClick={() => handleFormat('formatBlock', '<pre>')}
+                        className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/80 hover:text-white transition"
                         title="Code Block"
                       >
                         <Code className="w-4 h-4" />
                       </button>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-white/40 hidden sm:inline">
-                        Paste Word docs to auto-clean styles
-                      </span>
+                    {/* View Toggle: Visual Editor vs HTML Code */}
+                    <div className="flex items-center p-0.5 rounded-lg bg-[#1C1B1B] border border-[#2A2B28]">
                       <button
                         type="button"
-                        onClick={() => setEditorMode(editorMode === 'code' ? 'preview' : 'code')}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#1C1B1B] hover:bg-[#2A2B28] text-xs font-semibold text-[#D9F45F] border border-[#2A2B28] transition"
+                        onClick={() => {
+                          if (editorMode === 'code') {
+                            setEditorMode('visual');
+                          }
+                        }}
+                        className={`px-2.5 py-1 rounded text-xs font-semibold flex items-center gap-1.5 transition ${
+                          editorMode === 'visual'
+                            ? 'bg-[#663399] text-white shadow-sm'
+                            : 'text-white/60 hover:text-white'
+                        }`}
                       >
-                        {editorMode === 'code' ? (
-                          <>
-                            <Eye className="w-3.5 h-3.5" />
-                            <span>Preview HTML</span>
-                          </>
-                        ) : (
-                          <>
-                            <Code className="w-3.5 h-3.5" />
-                            <span>Edit Code</span>
-                          </>
-                        )}
+                        <Eye className="w-3.5 h-3.5 text-[#D9F45F]" />
+                        <span>Visual Editor</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (editorMode === 'visual' && visualEditorRef.current) {
+                            setContent(visualEditorRef.current.innerHTML);
+                            setEditorMode('code');
+                          }
+                        }}
+                        className={`px-2.5 py-1 rounded text-xs font-semibold flex items-center gap-1.5 transition ${
+                          editorMode === 'code'
+                            ? 'bg-[#663399] text-white shadow-sm'
+                            : 'text-white/60 hover:text-white'
+                        }`}
+                      >
+                        <Code className="w-3.5 h-3.5 text-[#D9F45F]" />
+                        <span>HTML Code</span>
                       </button>
                     </div>
                   </div>
 
-                  {editorMode === 'code' ? (
-                    <textarea
-                      rows={16}
-                      value={content}
-                      onChange={(e) => setContent(e.target.value)}
-                      onPaste={handleCleanPasteFromWord}
-                      placeholder="Write your article body here using semantic HTML. Microsoft Word text can be pasted directly and will auto-clean formatting..."
-                      className="w-full p-4 rounded-b-xl bg-[#151414] border border-[#2A2B28] text-white text-sm font-mono leading-relaxed focus:outline-none focus:border-[#D9F45F] transition"
+                  {/* Editor Surface */}
+                  {editorMode === 'visual' ? (
+                    <div
+                      ref={visualEditorRef}
+                      contentEditable
+                      suppressContentEditableWarning
+                      onInput={() => {
+                        if (visualEditorRef.current) {
+                          setContent(visualEditorRef.current.innerHTML);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (visualEditorRef.current) {
+                          setContent(visualEditorRef.current.innerHTML);
+                        }
+                      }}
+                      onPaste={handlePaste}
+                      className="w-full min-h-[440px] max-h-[700px] overflow-y-auto p-6 rounded-b-xl bg-[#151414] border border-[#2A2B28] text-white prose prose-invert prose-headings:font-bold prose-headings:text-white prose-p:text-white/80 prose-a:text-[#D9F45F] prose-li:text-white/80 max-w-none focus:outline-none focus:border-[#D9F45F] transition leading-relaxed text-sm"
                     />
                   ) : (
-                    <div
-                      className="w-full min-h-[384px] p-6 rounded-b-xl bg-[#151414] border border-[#2A2B28] prose prose-invert prose-sm max-w-none overflow-y-auto"
-                      dangerouslySetInnerHTML={{ __html: content }}
+                    <textarea
+                      ref={codeEditorRef}
+                      rows={18}
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      onPaste={handlePaste}
+                      placeholder="Write or edit raw semantic HTML code here. Microsoft Word content can be pasted directly and will auto-clean formatting..."
+                      className="w-full p-4 rounded-b-xl bg-[#151414] border border-[#2A2B28] text-emerald-300 text-xs font-mono leading-relaxed focus:outline-none focus:border-[#D9F45F] transition"
                     />
                   )}
+
+                  <div className="flex items-center justify-between text-[11px] text-white/40 mt-1.5 px-1">
+                    <span>
+                      Smart Word &amp; Docs Parser active: Headings (H1–H4), lists, bold, italics, and links are preserved on paste.
+                    </span>
+                    <span className="font-mono">
+                      Mode: {editorMode === 'visual' ? 'WYSIWYG Visual' : 'Raw HTML'}
+                    </span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -559,7 +949,7 @@ export default function BlogEditorPage({ params }: { params: Promise<{ id: strin
               </CardContent>
             </Card>
 
-            {/* Featured Image */}
+            {/* Featured Cover Image */}
             <Card>
               <CardHeader className="p-4 pb-2">
                 <CardTitle className="text-sm font-bold flex items-center justify-between">
@@ -614,10 +1004,114 @@ export default function BlogEditorPage({ params }: { params: Promise<{ id: strin
               </CardContent>
             </Card>
 
-            {/* Tags & Taxonomy */}
+            {/* Blog Categories Card (Situated ABOVE Tags & Entities) */}
             <Card>
               <CardHeader className="p-4 pb-2">
-                <CardTitle className="text-sm font-bold">Tags & Entities</CardTitle>
+                <CardTitle className="text-sm font-bold flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-[#D9F45F]" />
+                    Blog Categories
+                  </span>
+                  <span className="text-[11px] font-mono text-white/50">
+                    {selectedCategoryIds.length} selected
+                  </span>
+                </CardTitle>
+                <CardDescription className="text-xs text-white/50">
+                  Select topics to classify this article on the website
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-4 space-y-3">
+                {availableCategories.length === 0 ? (
+                  <p className="text-xs text-white/40 italic">No categories created yet.</p>
+                ) : (
+                  <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+                    {availableCategories.map((cat) => {
+                      const isChecked = selectedCategoryIds.includes(cat.id);
+                      return (
+                        <label
+                          key={cat.id}
+                          className={`flex items-center justify-between p-2 rounded-lg border text-xs cursor-pointer transition ${
+                            isChecked
+                              ? 'bg-[#663399]/25 border-[#663399] text-white'
+                              : 'bg-[#151414] border-[#2A2B28] text-white/70 hover:text-white'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => handleToggleCategory(cat.id)}
+                              className="w-3.5 h-3.5 rounded text-[#663399] bg-[#1C1B1B] border-[#2A2B28]"
+                            />
+                            <span className="font-medium truncate">{cat.name}</span>
+                          </div>
+                          {cat._count?.posts !== undefined && (
+                            <span className="text-[10px] text-white/40 shrink-0 font-mono">
+                              {cat._count.posts} posts
+                            </span>
+                          )}
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Inline Add Category Option */}
+                {showAddCatInput ? (
+                  <form onSubmit={handleCreateCategoryInline} className="pt-2 border-t border-[#2A2B28] space-y-2">
+                    <Input
+                      type="text"
+                      autoFocus
+                      required
+                      placeholder="New category name..."
+                      value={newCatName}
+                      onChange={(e) => setNewCatName(e.target.value)}
+                      className="text-xs h-8"
+                    />
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="submit"
+                        size="sm"
+                        disabled={creatingCat || !newCatName.trim()}
+                        variant="primary"
+                        className="h-7 text-xs flex-1"
+                      >
+                        {creatingCat ? 'Adding...' : 'Add Category'}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setShowAddCatInput(false);
+                          setNewCatName('');
+                        }}
+                        className="h-7 text-xs text-white/60"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </form>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowAddCatInput(true)}
+                    className="w-full py-1.5 rounded-lg border border-dashed border-[#2A2B28] text-xs text-[#D9F45F] hover:bg-[#D9F45F]/10 transition flex items-center justify-center gap-1 font-medium"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Create New Category</span>
+                  </button>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Tags & Entities Card */}
+            <Card>
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="text-sm font-bold">Tags &amp; Entities</CardTitle>
+                <CardDescription className="text-xs text-white/50">
+                  Semantic entities for search graph indexing
+                </CardDescription>
               </CardHeader>
               <CardContent className="p-4 space-y-3">
                 <div>
@@ -639,7 +1133,7 @@ export default function BlogEditorPage({ params }: { params: Promise<{ id: strin
         /* SEO Tab */
         <Card className="max-w-3xl">
           <CardHeader>
-            <CardTitle>Article Search Optimization & JSON-LD</CardTitle>
+            <CardTitle>Article Search Optimization &amp; JSON-LD</CardTitle>
             <CardDescription>
               Control search engine preview snippets, canonical links, and social card previews.
             </CardDescription>
