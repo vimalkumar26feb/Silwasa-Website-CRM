@@ -6,6 +6,7 @@ const router: Router = Router();
 
 // Public route for public website styling and branding
 router.get('/public', settingsController.getPublicSettings);
+router.post('/newsletter/subscribe', settingsController.subscribeNewsletter);
 
 // Protected administrative settings routes
 router.get('/theme', authenticate, settingsController.getThemeSettings);
@@ -14,5 +15,17 @@ router.get('/general', authenticate, settingsController.getGeneralSettings);
 router.put('/general', authenticate, settingsController.updateGeneralSettings);
 router.get('/email', authenticate, settingsController.getEmailSettings);
 router.put('/email', authenticate, settingsController.updateEmailSettings);
+
+// SEO & Analytics routes
+router.get('/seo', authenticate, settingsController.getSeoSettings);
+router.put('/seo', authenticate, settingsController.updateSeoSettings);
+
+// Promotional Popups routes
+router.get('/popups', authenticate, settingsController.getPopupSettings);
+router.put('/popups', authenticate, settingsController.updatePopupSettings);
+
+// Newsletter Subscribers routes
+router.get('/newsletter', authenticate, settingsController.getNewsletterSubscribers);
+router.delete('/newsletter/:id', authenticate, settingsController.deleteNewsletterSubscriber);
 
 export default router;

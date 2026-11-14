@@ -29,6 +29,9 @@ import {
   Code,
   Sparkles,
   Search,
+  Calendar,
+  UploadCloud,
+  FileText,
 } from 'lucide-react';
 
 export default function BlogEditorPage({ params }: { params: Promise<{ id: string }> }) {
@@ -40,6 +43,8 @@ export default function BlogEditorPage({ params }: { params: Promise<{ id: strin
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'content' | 'seo'>('content');
+  const [editorMode, setEditorMode] = useState<'code' | 'preview'>('code');
+  const [uploadingCover, setUploadingCover] = useState(false);
 
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
@@ -47,6 +52,7 @@ export default function BlogEditorPage({ params }: { params: Promise<{ id: strin
   const [content, setContent] = useState('');
   const [featuredImageUrl, setFeaturedImageUrl] = useState('');
   const [isPublished, setIsPublished] = useState(false);
+  const [publishedAt, setPublishedAt] = useState('');
   const [categories, setCategories] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
 
@@ -88,6 +94,12 @@ export default function BlogEditorPage({ params }: { params: Promise<{ id: strin
           setContent(p.content);
           setFeaturedImageUrl(p.featuredImageUrl || '');
           setIsPublished(p.isPublished);
+          if (p.publishedAt) {
+            const d = new Date(p.publishedAt);
+            const pad = (n: number) => String(n).padStart(2, '0');
+            const localIso = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            setPublishedAt(localIso);
+          }
           if (p.categories) {
             setCategories(p.categories.map((c) => c.name || (c as any).category?.name || ''));
           }
@@ -122,6 +134,56 @@ export default function BlogEditorPage({ params }: { params: Promise<{ id: strin
     setContent((prev) => `${prev}\n${tag}Text${endTag || tag}\n`);
   };
 
+  const handleCleanPasteFromWord = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const pastedHtml = e.clipboardData.getData('text/html');
+    if (pastedHtml && (pastedHtml.includes('MsoNormal') || pastedHtml.includes('urn:schemas-microsoft-com') || pastedHtml.includes('<p') || pastedHtml.includes('<h'))) {
+      e.preventDefault();
+      const cleaned = pastedHtml
+        .replace(/<!--[\s\S]*?-->/g, '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<xml[\s\S]*?<\/xml>/gi, '')
+        .replace(/\s+class="[^"]*"/gi, '')
+        .replace(/\s+style="[^"]*"/gi, '')
+        .replace(/\s+lang="[^"]*"/gi, '')
+        .replace(/<\/?o:[^>]*>/gi, '')
+        .replace(/<\/?w:[^>]*>/gi, '')
+        .replace(/<\/?m:[^>]*>/gi, '')
+        .replace(/<\/?span[^>]*>/gi, '')
+        .replace(/<p>\s*&nbsp;\s*<\/p>/gi, '')
+        .replace(/<p>\s*<\/p>/gi, '')
+        .trim();
+
+      setContent((prev) => (prev ? `${prev}\n\n${cleaned}` : cleaned));
+      setSuccessMessage('Cleaned and auto-formatted pasted Microsoft Word/Docs content.');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    }
+  };
+
+  const handleCoverUpload = async (file: File) => {
+    try {
+      setUploadingCover(true);
+      const formData = new FormData();
+      formData.append('file', file);
+      const token = typeof window !== 'undefined' ? sessionStorage.getItem('silwasa_token') : null;
+      const res = await fetch('http://localhost:5000/api/v1/admin/media/upload', {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include',
+        body: formData,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.data?.url) {
+          setFeaturedImageUrl(data.data.url);
+        }
+      }
+    } catch {
+      // Ignore
+    } finally {
+      setUploadingCover(false);
+    }
+  };
+
   const handleSave = async (publishedState?: boolean) => {
     if (!title.trim() || !slug.trim() || !content.trim()) {
       setErrorMessage('Please fill in Title, Slug, and Article Content.');
@@ -145,6 +207,7 @@ export default function BlogEditorPage({ params }: { params: Promise<{ id: strin
         content,
         featuredImageUrl: featuredImageUrl || null,
         isPublished: targetPublished,
+        publishedAt: publishedAt ? new Date(publishedAt).toISOString() : null,
         readingTimeMinutes: computedReadingTime,
         tagNames,
         seo,
@@ -346,80 +409,113 @@ export default function BlogEditorPage({ params }: { params: Promise<{ id: strin
                   </div>
 
                   {/* Formatting Toolbar */}
-                  <div className="flex items-center gap-1 p-2 rounded-t-xl bg-[#151414] border border-[#2A2B28] border-b-0">
-                    <button
-                      type="button"
-                      onClick={() => handleInsertFormatting('<strong>', '</strong>')}
-                      className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/70 hover:text-white"
-                      title="Bold"
-                    >
-                      <Bold className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleInsertFormatting('<em>', '</em>')}
-                      className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/70 hover:text-white"
-                      title="Italic"
-                    >
-                      <Italic className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleInsertFormatting('<h2>', '</h2>')}
-                      className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/70 hover:text-white"
-                      title="Heading 2"
-                    >
-                      <Heading1 className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleInsertFormatting('<h3>', '</h3>')}
-                      className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/70 hover:text-white"
-                      title="Heading 3"
-                    >
-                      <Heading2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleInsertFormatting('<ul>\n  <li>', '</li>\n</ul>')}
-                      className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/70 hover:text-white"
-                      title="Bullet List"
-                    >
-                      <List className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleInsertFormatting('<ol>\n  <li>', '</li>\n</ol>')}
-                      className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/70 hover:text-white"
-                      title="Numbered List"
-                    >
-                      <ListOrdered className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleInsertFormatting('<blockquote>', '</blockquote>')}
-                      className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/70 hover:text-white"
-                      title="Blockquote"
-                    >
-                      <Quote className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleInsertFormatting('<pre><code>', '</code></pre>')}
-                      className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/70 hover:text-white"
-                      title="Code Block"
-                    >
-                      <Code className="w-4 h-4" />
-                    </button>
+                  <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-t-xl bg-[#151414] border border-[#2A2B28] border-b-0">
+                    <div className="flex flex-wrap items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleInsertFormatting('<strong>', '</strong>')}
+                        className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/70 hover:text-white"
+                        title="Bold"
+                      >
+                        <Bold className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleInsertFormatting('<em>', '</em>')}
+                        className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/70 hover:text-white"
+                        title="Italic"
+                      >
+                        <Italic className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleInsertFormatting('<h2>', '</h2>')}
+                        className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/70 hover:text-white"
+                        title="Heading 2"
+                      >
+                        <Heading1 className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleInsertFormatting('<h3>', '</h3>')}
+                        className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/70 hover:text-white"
+                        title="Heading 3"
+                      >
+                        <Heading2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleInsertFormatting('<ul>\n  <li>', '</li>\n</ul>')}
+                        className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/70 hover:text-white"
+                        title="Bullet List"
+                      >
+                        <List className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleInsertFormatting('<ol>\n  <li>', '</li>\n</ol>')}
+                        className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/70 hover:text-white"
+                        title="Numbered List"
+                      >
+                        <ListOrdered className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleInsertFormatting('<blockquote>', '</blockquote>')}
+                        className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/70 hover:text-white"
+                        title="Blockquote"
+                      >
+                        <Quote className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleInsertFormatting('<pre><code>', '</code></pre>')}
+                        className="p-1.5 rounded hover:bg-[#1C1B1B] text-white/70 hover:text-white"
+                        title="Code Block"
+                      >
+                        <Code className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-white/40 hidden sm:inline">
+                        Paste Word docs to auto-clean styles
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setEditorMode(editorMode === 'code' ? 'preview' : 'code')}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#1C1B1B] hover:bg-[#2A2B28] text-xs font-semibold text-[#D9F45F] border border-[#2A2B28] transition"
+                      >
+                        {editorMode === 'code' ? (
+                          <>
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Preview HTML</span>
+                          </>
+                        ) : (
+                          <>
+                            <Code className="w-3.5 h-3.5" />
+                            <span>Edit Code</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
 
-                  <textarea
-                    rows={16}
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    placeholder="Write your article body here using semantic HTML or markdown..."
-                    className="w-full p-4 rounded-b-xl bg-[#151414] border border-[#2A2B28] text-white text-sm font-mono leading-relaxed focus:outline-none focus:border-[#D9F45F] transition"
-                  />
+                  {editorMode === 'code' ? (
+                    <textarea
+                      rows={16}
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      onPaste={handleCleanPasteFromWord}
+                      placeholder="Write your article body here using semantic HTML. Microsoft Word text can be pasted directly and will auto-clean formatting..."
+                      className="w-full p-4 rounded-b-xl bg-[#151414] border border-[#2A2B28] text-white text-sm font-mono leading-relaxed focus:outline-none focus:border-[#D9F45F] transition"
+                    />
+                  ) : (
+                    <div
+                      className="w-full min-h-[384px] p-6 rounded-b-xl bg-[#151414] border border-[#2A2B28] prose prose-invert prose-sm max-w-none overflow-y-auto"
+                      dangerouslySetInnerHTML={{ __html: content }}
+                    />
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -427,12 +523,53 @@ export default function BlogEditorPage({ params }: { params: Promise<{ id: strin
 
           {/* Right Sidebar: Meta & Attributes (4 cols) */}
           <div className="lg:col-span-4 space-y-4">
-            {/* Featured Image */}
+            {/* Publication & Scheduling Card */}
             <Card>
               <CardHeader className="p-4 pb-2">
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <ImageIcon className="w-4 h-4 text-[#D9F45F]" />
-                  Cover Image
+                  <Calendar className="w-4 h-4 text-[#D9F45F]" />
+                  Publish &amp; Schedule
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-[#2A2B28]">
+                  <span className="text-xs text-white/70">Current Status</span>
+                  <Badge variant={isPublished ? 'success' : 'warning'}>
+                    {isPublished ? 'Published' : 'Draft'}
+                  </Badge>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-white/70 mb-1">
+                    Schedule Future Date/Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={publishedAt}
+                    onChange={(e) => setPublishedAt(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-[#151414] border border-[#2A2B28] text-white text-xs focus:outline-none focus:border-[#D9F45F]"
+                  />
+                  {publishedAt && new Date(publishedAt) > new Date() && (
+                    <p className="text-[11px] text-amber-400 mt-1.5 flex items-center gap-1 font-medium">
+                      <Clock className="w-3.5 h-3.5" />
+                      Scheduled: {new Date(publishedAt).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Featured Image */}
+            <Card>
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="text-sm font-bold flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-[#D9F45F]" />
+                    Cover Image
+                  </span>
+                  {uploadingCover && (
+                    <span className="text-[11px] text-[#D9F45F] animate-pulse">Uploading...</span>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4 space-y-3">
@@ -442,6 +579,19 @@ export default function BlogEditorPage({ params }: { params: Promise<{ id: strin
                   value={featuredImageUrl}
                   onChange={(e) => setFeaturedImageUrl(e.target.value)}
                 />
+                <label className="inline-flex items-center justify-center gap-1.5 w-full py-2 rounded-xl bg-[#663399]/20 hover:bg-[#663399]/30 text-white text-xs font-semibold cursor-pointer border border-[#663399]/40 transition">
+                  <UploadCloud className="w-3.5 h-3.5 text-[#D9F45F]" />
+                  <span>Upload Cover Image File</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleCoverUpload(file);
+                    }}
+                  />
+                </label>
                 {featuredImageUrl && (
                   <div className="w-full h-36 rounded-xl overflow-hidden border border-[#2A2B28] bg-[#151414] relative">
                     {/* eslint-disable-next-line @next/next/no-img-element */}

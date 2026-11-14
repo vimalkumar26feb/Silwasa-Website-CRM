@@ -37,6 +37,30 @@ export class MediaRepository {
     });
   }
 
+  async countByBaseName(baseName: string, ext: string): Promise<number> {
+    return prisma.mediaItem.count({
+      where: {
+        originalName: {
+          startsWith: baseName,
+          endsWith: ext,
+          mode: 'insensitive',
+        },
+      },
+    });
+  }
+
+  async existsByOriginalName(originalName: string): Promise<boolean> {
+    const count = await prisma.mediaItem.count({
+      where: {
+        originalName: {
+          equals: originalName,
+          mode: 'insensitive',
+        },
+      },
+    });
+    return count > 0;
+  }
+
   async findAll(params: {
     page?: number;
     limit?: number;

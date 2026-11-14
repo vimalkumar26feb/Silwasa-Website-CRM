@@ -47,6 +47,14 @@ export function createBlogRoutes(): { publicRouter: Router; adminRouter: Router 
     blogController.deleteBlog(req, res, next)
   );
 
+  adminRouter.get('/categories', (req, res, next) =>
+    blogController.getCategories(req, res, next)
+  );
+
+  adminRouter.get('/tags', (req, res, next) =>
+    blogController.getTags(req, res, next)
+  );
+
   adminRouter.post('/categories', (req, res, next) =>
     blogController.createCategory(req, res, next)
   );

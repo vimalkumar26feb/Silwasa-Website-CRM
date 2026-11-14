@@ -144,6 +144,28 @@ export default function AdminBlogsPage() {
         </Link>
       </div>
 
+      {/* Blog Section Tabs */}
+      <div className="flex items-center gap-2 border-b border-[#2A2B28] pb-3">
+        <Link
+          href="/admin/blogs"
+          className="px-4 py-2 rounded-xl text-xs font-bold bg-[#663399] text-white shadow-md shadow-[#663399]/20"
+        >
+          Articles &amp; Posts
+        </Link>
+        <Link
+          href="/admin/categories"
+          className="px-4 py-2 rounded-xl text-xs font-semibold text-white/70 hover:text-white hover:bg-[#1C1B1B] transition"
+        >
+          Categories
+        </Link>
+        <Link
+          href="/admin/tags"
+          className="px-4 py-2 rounded-xl text-xs font-semibold text-white/70 hover:text-white hover:bg-[#1C1B1B] transition"
+        >
+          Tags &amp; Entities
+        </Link>
+      </div>
+
       {/* Notifications */}
       {successMessage && (
         <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm flex items-center justify-between">

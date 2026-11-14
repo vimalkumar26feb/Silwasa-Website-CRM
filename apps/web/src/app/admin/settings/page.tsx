@@ -10,18 +10,22 @@ import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../../components/ui/Card';
 import { Skeleton } from '../../../components/ui/Skeleton';
-import { Save, Plus, Trash2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Save, Plus, Trash2, CheckCircle2, AlertCircle, UploadCloud, Image as ImageIcon } from 'lucide-react';
 
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingFavicon, setUploadingFavicon] = useState(false);
 
   const {
     register,
     handleSubmit,
     control,
     reset,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<GeneralSettings>({
     resolver: zodResolver(GeneralSettingsSchema),
@@ -38,9 +42,43 @@ export default function AdminSettingsPage() {
       copyrightText: '',
       timezone: 'Asia/Kolkata',
       defaultCurrency: 'INR',
+      logoUrl: '',
+      faviconUrl: '',
       socialLinks: [],
     },
   });
+
+  const logoUrlVal = watch('logoUrl');
+  const faviconUrlVal = watch('faviconUrl');
+
+  const handleAssetUpload = async (file: File, field: 'logoUrl' | 'faviconUrl') => {
+    try {
+      if (field === 'logoUrl') setUploadingLogo(true);
+      else setUploadingFavicon(true);
+
+      const formData = new FormData();
+      formData.append('file', file);
+      const token = typeof window !== 'undefined' ? sessionStorage.getItem('silwasa_token') : null;
+      const res = await fetch('http://localhost:5000/api/v1/admin/media/upload', {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include',
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.data?.url) {
+          setValue(field, data.data.url, { shouldDirty: true });
+        }
+      }
+    } catch {
+      // Ignore or handle
+    } finally {
+      if (field === 'logoUrl') setUploadingLogo(false);
+      else setUploadingFavicon(false);
+    }
+  };
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -172,6 +210,105 @@ export default function AdminSettingsPage() {
           </CardContent>
         </Card>
 
+        {/* Card: Brand Assets & Visual Identity */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Brand Assets &amp; Visual Identity</CardTitle>
+            <CardDescription>Upload or configure official site logo and browser favicon (siticon)</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Brand Logo */}
+              <div className="space-y-3 p-4 rounded-xl bg-[#151414] border border-[#2A2B28]">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-white/90">
+                    Primary Brand Logo
+                  </label>
+                  {uploadingLogo && (
+                    <span className="text-[11px] text-[#D9F45F] animate-pulse">Uploading...</span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <div className="w-20 h-16 rounded-lg bg-[#1C1B1B] border border-[#2A2B28] flex items-center justify-center overflow-hidden shrink-0">
+                    {logoUrlVal ? (
+                      <img src={logoUrlVal} alt="Logo Preview" className="max-h-full max-w-full object-contain" />
+                    ) : (
+                      <ImageIcon className="w-6 h-6 text-white/30" />
+                    )}
+                  </div>
+
+                  <div className="flex-1 space-y-2">
+                    <input
+                      type="text"
+                      placeholder="https://... or upload image"
+                      className="w-full px-3 py-1.5 rounded-md bg-[#1C1B1B] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#663399]"
+                      {...register('logoUrl')}
+                    />
+                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#663399]/20 hover:bg-[#663399]/30 text-white text-xs font-medium cursor-pointer border border-[#663399]/40 transition">
+                      <UploadCloud className="w-3.5 h-3.5 text-[#D9F45F]" />
+                      <span>Upload Logo File</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleAssetUpload(file, 'logoUrl');
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Brand Favicon (Siticon) */}
+              <div className="space-y-3 p-4 rounded-xl bg-[#151414] border border-[#2A2B28]">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-white/90">
+                    Browser Favicon (Siticon)
+                  </label>
+                  {uploadingFavicon && (
+                    <span className="text-[11px] text-[#D9F45F] animate-pulse">Uploading...</span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-lg bg-[#1C1B1B] border border-[#2A2B28] flex items-center justify-center overflow-hidden shrink-0">
+                    {faviconUrlVal ? (
+                      <img src={faviconUrlVal} alt="Favicon Preview" className="w-8 h-8 object-contain" />
+                    ) : (
+                      <ImageIcon className="w-6 h-6 text-white/30" />
+                    )}
+                  </div>
+
+                  <div className="flex-1 space-y-2">
+                    <input
+                      type="text"
+                      placeholder="https://... or upload .ico/.png"
+                      className="w-full px-3 py-1.5 rounded-md bg-[#1C1B1B] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#663399]"
+                      {...register('faviconUrl')}
+                    />
+                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#663399]/20 hover:bg-[#663399]/30 text-white text-xs font-medium cursor-pointer border border-[#663399]/40 transition">
+                      <UploadCloud className="w-3.5 h-3.5 text-[#D9F45F]" />
+                      <span>Upload Favicon File</span>
+                      <input
+                        type="file"
+                        accept="image/x-icon,image/png,image/svg+xml"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleAssetUpload(file, 'faviconUrl');
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Card 2: Contact & Direct Channels */}
         <Card>
           <CardHeader>
@@ -214,6 +351,105 @@ export default function AdminSettingsPage() {
                 error={errors.copyrightText?.message}
                 {...register('copyrightText')}
               />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card: Brand Assets & Visual Identity */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Brand Assets &amp; Visual Identity</CardTitle>
+            <CardDescription>Upload or configure official site logo and browser favicon (siticon)</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Brand Logo */}
+              <div className="space-y-3 p-4 rounded-xl bg-[#151414] border border-[#2A2B28]">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-white/90">
+                    Primary Brand Logo
+                  </label>
+                  {uploadingLogo && (
+                    <span className="text-[11px] text-[#D9F45F] animate-pulse">Uploading...</span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <div className="w-20 h-16 rounded-lg bg-[#1C1B1B] border border-[#2A2B28] flex items-center justify-center overflow-hidden shrink-0">
+                    {logoUrlVal ? (
+                      <img src={logoUrlVal} alt="Logo Preview" className="max-h-full max-w-full object-contain" />
+                    ) : (
+                      <ImageIcon className="w-6 h-6 text-white/30" />
+                    )}
+                  </div>
+
+                  <div className="flex-1 space-y-2">
+                    <input
+                      type="text"
+                      placeholder="https://... or upload image"
+                      className="w-full px-3 py-1.5 rounded-md bg-[#1C1B1B] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#663399]"
+                      {...register('logoUrl')}
+                    />
+                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#663399]/20 hover:bg-[#663399]/30 text-white text-xs font-medium cursor-pointer border border-[#663399]/40 transition">
+                      <UploadCloud className="w-3.5 h-3.5 text-[#D9F45F]" />
+                      <span>Upload Logo File</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleAssetUpload(file, 'logoUrl');
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Brand Favicon (Siticon) */}
+              <div className="space-y-3 p-4 rounded-xl bg-[#151414] border border-[#2A2B28]">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-white/90">
+                    Browser Favicon (Siticon)
+                  </label>
+                  {uploadingFavicon && (
+                    <span className="text-[11px] text-[#D9F45F] animate-pulse">Uploading...</span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-lg bg-[#1C1B1B] border border-[#2A2B28] flex items-center justify-center overflow-hidden shrink-0">
+                    {faviconUrlVal ? (
+                      <img src={faviconUrlVal} alt="Favicon Preview" className="w-8 h-8 object-contain" />
+                    ) : (
+                      <ImageIcon className="w-6 h-6 text-white/30" />
+                    )}
+                  </div>
+
+                  <div className="flex-1 space-y-2">
+                    <input
+                      type="text"
+                      placeholder="https://... or upload .ico/.png"
+                      className="w-full px-3 py-1.5 rounded-md bg-[#1C1B1B] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#663399]"
+                      {...register('faviconUrl')}
+                    />
+                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#663399]/20 hover:bg-[#663399]/30 text-white text-xs font-medium cursor-pointer border border-[#663399]/40 transition">
+                      <UploadCloud className="w-3.5 h-3.5 text-[#D9F45F]" />
+                      <span>Upload Favicon File</span>
+                      <input
+                        type="file"
+                        accept="image/x-icon,image/png,image/svg+xml"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleAssetUpload(file, 'faviconUrl');
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

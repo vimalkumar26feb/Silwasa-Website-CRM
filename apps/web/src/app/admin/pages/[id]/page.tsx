@@ -810,6 +810,94 @@ export default function PageBuilderPage({ params }: { params: Promise<{ id: stri
                         </div>
                       )}
 
+                      {/* Dynamic FAQs Editor */}
+                      {selectedSection.type === 'faqs' && (() => {
+                        const faqsList: Array<{ question: string; answer: string }> =
+                          Array.isArray(settings.faqs) ? settings.faqs : [];
+
+                        const handleAddFaqItem = () => {
+                          const updated = [
+                            ...faqsList,
+                            { question: 'New Question?', answer: 'Detailed answer goes here...' },
+                          ];
+                          handleUpdateSetting('faqs', updated);
+                        };
+
+                        const handleUpdateFaqItem = (idx: number, field: 'question' | 'answer', val: string) => {
+                          const updated = [...faqsList];
+                          updated[idx] = { ...updated[idx], [field]: val };
+                          handleUpdateSetting('faqs', updated);
+                        };
+
+                        const handleRemoveFaqItem = (idx: number) => {
+                          const updated = faqsList.filter((_, i) => i !== idx);
+                          handleUpdateSetting('faqs', updated);
+                        };
+
+                        return (
+                          <div className="space-y-3 pt-3 border-t border-[#2A2B28]">
+                            <div className="flex items-center justify-between">
+                              <label className="block text-xs font-bold text-[#D9F45F] uppercase tracking-wider">
+                                Custom Page FAQs ({faqsList.length})
+                              </label>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={handleAddFaqItem}
+                                className="h-7 text-[11px] px-2.5"
+                              >
+                                <Plus className="w-3 h-3 mr-1" />
+                                Add FAQ Item
+                              </Button>
+                            </div>
+
+                            <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1">
+                              {faqsList.length === 0 ? (
+                                <p className="text-xs text-white/40 italic p-3 rounded-lg bg-[#151414] border border-[#2A2B28]">
+                                  Using default global FAQs. Click "Add FAQ Item" to create dynamic questions specific to this page.
+                                </p>
+                              ) : (
+                                faqsList.map((item, fIdx) => (
+                                  <div
+                                    key={fIdx}
+                                    className="p-3 rounded-xl bg-[#151414] border border-[#2A2B28] space-y-2 relative group"
+                                  >
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="text-[10px] font-mono text-white/50">
+                                        Q{fIdx + 1}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveFaqItem(fIdx)}
+                                        className="text-red-400 hover:text-red-300 p-0.5"
+                                        title="Delete FAQ"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                    <input
+                                      type="text"
+                                      value={item.question}
+                                      onChange={(e) => handleUpdateFaqItem(fIdx, 'question', e.target.value)}
+                                      placeholder="Question?"
+                                      className="w-full px-2.5 py-1.5 rounded-lg bg-[#1C1B1B] text-white text-xs font-semibold border border-[#2A2B28] focus:outline-none focus:border-[#D9F45F]"
+                                    />
+                                    <textarea
+                                      rows={2}
+                                      value={item.answer}
+                                      onChange={(e) => handleUpdateFaqItem(fIdx, 'answer', e.target.value)}
+                                      placeholder="Answer..."
+                                      className="w-full px-2.5 py-1.5 rounded-lg bg-[#1C1B1B] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#D9F45F]"
+                                    />
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
                       <div className="pt-2 border-t border-[#2A2B28] flex items-center justify-between text-xs text-white/50">
                         <span>Status: {selectedSection.isEnabled ? 'Visible' : 'Hidden'}</span>
                         <Button

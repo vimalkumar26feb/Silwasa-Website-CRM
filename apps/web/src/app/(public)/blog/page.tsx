@@ -22,6 +22,7 @@ const SEEDED_POSTS: BlogPost[] = [
     excerpt:
       'Why traditional keywords are being replaced by entity authority, schema graphs, and vector retrieval in the AI search era.',
     content: '<p>Comprehensive breakdown of how search engines and LLM agents parse entity graphs.</p>',
+    featuredImageUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80',
     readingTimeMinutes: 6,
     isPublished: true,
     publishedAt: '2026-11-10T00:00:00.000Z',
@@ -38,6 +39,7 @@ const SEEDED_POSTS: BlogPost[] = [
     excerpt:
       'Detailed engineering blueprint for hitting 99+ Lighthouse performance scores, instant streaming SSR, and sub-second Largest Contentful Paint.',
     content: '<p>Analyzing server components, streaming SSR, edge caching and font sub-setting.</p>',
+    featuredImageUrl: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80',
     readingTimeMinutes: 8,
     isPublished: true,
     publishedAt: '2026-11-05T00:00:00.000Z',
@@ -54,6 +56,7 @@ const SEEDED_POSTS: BlogPost[] = [
     excerpt:
       'Eliminating architectural debt through schema-driven validation, transactional Prisma ORMs, and automated end-to-end integration testing.',
     content: '<p>A deep dive into clean architecture in commercial software development.</p>',
+    featuredImageUrl: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80',
     readingTimeMinutes: 5,
     isPublished: true,
     publishedAt: '2026-10-28T00:00:00.000Z',
@@ -115,35 +118,53 @@ export default async function BlogIndexPage() {
         {/* Featured Post Card */}
         {featuredPost && (
           <div className="mb-16">
-            <div className="p-8 sm:p-12 rounded-3xl bg-gradient-to-br from-[#1C1B1B] to-[#211b27] border border-[#663399]/40 shadow-2xl relative overflow-hidden group">
-              <div className="space-y-4 max-w-3xl">
-                <div className="flex items-center gap-3">
-                  <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-[#D9F45F]/15 text-[#D9F45F] border border-[#D9F45F]/30 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    Featured Article
-                  </span>
-                  <span className="text-xs text-white/50 flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5" />
-                    {featuredPost.readingTimeMinutes || 5} min read
-                  </span>
+            <div className="p-6 sm:p-10 lg:p-12 rounded-3xl bg-gradient-to-br from-[#1C1B1B] to-[#211b27] border border-[#663399]/40 shadow-2xl relative overflow-hidden group">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                <div className="lg:col-span-7 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-[#D9F45F]/15 text-[#D9F45F] border border-[#D9F45F]/30 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      Featured Article
+                    </span>
+                    <span className="text-xs text-white/50 flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5" />
+                      {featuredPost.readingTimeMinutes || 5} min read
+                    </span>
+                  </div>
+
+                  <h2 className="text-2xl sm:text-4xl font-extrabold text-white group-hover:text-[#D9F45F] transition-colors leading-tight">
+                    <Link href={`/blog/${featuredPost.slug}`}>
+                      {featuredPost.title}
+                    </Link>
+                  </h2>
+
+                  <p className="text-base text-white/70 leading-relaxed max-w-2xl">
+                    {featuredPost.excerpt}
+                  </p>
+
+                  <div className="pt-4 flex items-center gap-4">
+                    <Link href={`/blog/${featuredPost.slug}`}>
+                      <Button variant="primary" size="lg" className="rounded-full">
+                        <span>Read Full Blueprint</span>
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
 
-                <h2 className="text-2xl sm:text-4xl font-extrabold text-white group-hover:text-[#D9F45F] transition-colors leading-tight">
-                  <Link href={`/blog/${featuredPost.slug}`}>
-                    {featuredPost.title}
-                  </Link>
-                </h2>
-
-                <p className="text-base text-white/70 leading-relaxed max-w-2xl">
-                  {featuredPost.excerpt}
-                </p>
-
-                <div className="pt-4 flex items-center gap-4">
-                  <Link href={`/blog/${featuredPost.slug}`}>
-                    <Button variant="primary" size="lg" className="rounded-full">
-                      <span>Read Full Blueprint</span>
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
+                <div className="lg:col-span-5">
+                  <Link href={`/blog/${featuredPost.slug}`} className="block relative aspect-[16/10] w-full rounded-2xl overflow-hidden border border-[#2A2B28] group/img bg-[#151414]">
+                    {featuredPost.featuredImageUrl ? (
+                      <img
+                        src={featuredPost.featuredImageUrl}
+                        alt={featuredPost.title}
+                        className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-tr from-[#1C1B1B] via-[#241a2e] to-[#151414] flex items-center justify-center text-white/30">
+                        <BookOpen className="w-12 h-12 text-[#663399]" />
+                      </div>
+                    )}
                   </Link>
                 </div>
               </div>
@@ -156,12 +177,36 @@ export default async function BlogIndexPage() {
           {remainingPosts.map((post) => (
             <div
               key={post.id}
-              className="p-8 rounded-3xl bg-[#1C1B1B] border border-[#2A2B28] hover:border-[#663399]/60 hover:shadow-2xl transition-all duration-300 flex flex-col justify-between group"
+              className="p-6 sm:p-7 rounded-3xl bg-[#1C1B1B] border border-[#2A2B28] hover:border-[#663399]/60 hover:shadow-2xl transition-all duration-300 flex flex-col justify-between group"
             >
               <div>
-                <div className="flex items-center justify-between text-xs text-white/50 mb-4">
-                  <span className="px-2.5 py-1 rounded-full bg-[#151414] border border-[#2A2B28] text-white/80 font-medium">
+                {/* Cover Image */}
+                <Link href={`/blog/${post.slug}`} className="block relative aspect-[16/9] w-full overflow-hidden rounded-2xl mb-5 bg-[#151414] border border-[#2A2B28] group/cardimg">
+                  {post.featuredImageUrl ? (
+                    <img
+                      src={post.featuredImageUrl}
+                      alt={post.title}
+                      className="w-full h-full object-cover group-hover/cardimg:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-tr from-[#151414] via-[#22182c] to-[#151414] flex items-center justify-center">
+                      <BookOpen className="w-8 h-8 text-[#663399]/60" />
+                    </div>
+                  )}
+                  <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-[#151414]/90 backdrop-blur-md border border-[#2A2B28] text-white/90 text-[10px] font-bold uppercase tracking-wider">
                     {post.categories?.[0]?.name || (post.categories?.[0] as any)?.category?.name || 'Technical'}
+                  </span>
+                </Link>
+
+                <div className="flex items-center justify-between text-xs text-white/50 mb-3">
+                  <span className="text-white/40">
+                    {post.publishedAt
+                      ? new Date(post.publishedAt).toLocaleDateString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })
+                      : 'Recent'}
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock className="w-3.5 h-3.5 text-white/40" />
@@ -169,24 +214,18 @@ export default async function BlogIndexPage() {
                   </span>
                 </div>
 
-                <h3 className="text-xl font-bold text-white mb-3 group-hover:text-[#D9F45F] transition-colors leading-snug">
+                <h3 className="text-xl font-bold text-white mb-3 group-hover:text-[#D9F45F] transition-colors leading-snug line-clamp-2">
                   <Link href={`/blog/${post.slug}`}>{post.title}</Link>
                 </h3>
 
-                <p className="text-sm text-white/70 leading-relaxed mb-6">
+                <p className="text-sm text-white/70 leading-relaxed mb-6 line-clamp-3">
                   {post.excerpt}
                 </p>
               </div>
 
               <div className="pt-4 border-t border-[#2A2B28]/60 flex items-center justify-between">
-                <span className="text-xs text-white/40">
-                  {post.publishedAt
-                    ? new Date(post.publishedAt).toLocaleDateString(undefined, {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })
-                    : 'Recent'}
+                <span className="text-xs text-white/40 font-mono">
+                  By {post.author?.name || 'Lead Architect'}
                 </span>
 
                 <Link

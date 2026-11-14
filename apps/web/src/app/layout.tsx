@@ -1,4 +1,8 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
+import { PageLoader } from '../components/ui/PageLoader';
+import { PromotionalPopup } from '../components/ui/PromotionalPopup';
+import { AnalyticsHead } from '../components/layout/AnalyticsHead';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -16,8 +20,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
+      <head>
+        <AnalyticsHead />
+      </head>
       <body className="min-h-screen bg-background text-foreground antialiased">
+        <Suspense fallback={null}>
+          <PageLoader />
+        </Suspense>
         {children}
+        <PromotionalPopup />
       </body>
     </html>
   );

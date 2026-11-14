@@ -1,3 +1,4 @@
+import path from 'path';
 import { mediaRepository } from '../repositories/media.repository.js';
 import { getStorageProvider } from '../integrations/storage/index.js';
 import { userRepository } from '../repositories/user.repository.js';
@@ -35,6 +36,27 @@ export class MediaService {
       const err: AppError = new Error('File exceeds maximum allowed size of 10 MB.');
       err.statusCode = 400;
       throw err;
+    }
+
+    // Duplicate Filename Handling: automatically append -01, -02 or timestamp if filename exists
+    const ext = path.extname(file.originalname);
+    const rawBaseName = path.basename(file.originalname, ext);
+    let finalOriginalName = file.originalname;
+
+    const exists = await mediaRepository.existsByOriginalName(finalOriginalName);
+    if (exists) {
+      let counter = 1;
+      let candidateName = `${rawBaseName}-${String(counter).padStart(2, '0')}${ext}`;
+      while (await mediaRepository.existsByOriginalName(candidateName)) {
+        counter++;
+        candidateName = `${rawBaseName}-${String(counter).padStart(2, '0')}${ext}`;
+        if (counter > 99) {
+          candidateName = `${rawBaseName}-${Date.now()}${ext}`;
+          break;
+        }
+      }
+      finalOriginalName = candidateName;
+      file.originalname = finalOriginalName;
     }
 
     const storage = getStorageProvider();

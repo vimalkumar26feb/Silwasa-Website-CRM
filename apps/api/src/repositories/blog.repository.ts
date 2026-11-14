@@ -17,6 +17,9 @@ export class BlogRepository {
 
     const where: any = {
       isPublished: true,
+      publishedAt: {
+        lte: new Date(),
+      },
     };
 
     if (opts.search) {
@@ -65,7 +68,14 @@ export class BlogRepository {
     return prisma.blogPost.findFirst({
       where: {
         slug,
-        ...(onlyPublished ? { isPublished: true } : {}),
+        ...(onlyPublished
+          ? {
+              isPublished: true,
+              publishedAt: {
+                lte: new Date(),
+              },
+            }
+          : {}),
       },
       include: {
         author: { select: { id: true, name: true, avatarUrl: true } },
@@ -124,13 +134,19 @@ export class BlogRepository {
   }
 
   async createPost(data: any, authorId: string) {
-    const { categoryIds = [], tagNames = [], seo, ...rest } = data;
+    const { categoryIds = [], tagNames = [], seo, publishedAt, ...rest } = data;
+
+    const finalPublishedAt = publishedAt
+      ? new Date(publishedAt)
+      : rest.isPublished
+        ? new Date()
+        : null;
 
     return prisma.blogPost.create({
       data: {
         ...rest,
         authorId,
-        publishedAt: rest.isPublished ? new Date() : null,
+        publishedAt: finalPublishedAt,
         categories: {
           create: categoryIds.map((categoryId: string) => ({ categoryId })),
         },
@@ -170,13 +186,20 @@ export class BlogRepository {
   }
 
   async updatePost(id: string, data: any) {
-    const { categoryIds, tagNames, seo, ...rest } = data;
+    const { categoryIds, tagNames, seo, publishedAt, ...rest } = data;
+
+    const publishedAtUpdate =
+      publishedAt !== undefined
+        ? { publishedAt: publishedAt ? new Date(publishedAt) : null }
+        : rest.isPublished
+          ? { publishedAt: new Date() }
+          : {};
 
     return prisma.blogPost.update({
       where: { id },
       data: {
         ...rest,
-        ...(rest.isPublished ? { publishedAt: new Date() } : {}),
+        ...publishedAtUpdate,
         ...(categoryIds
           ? {
               categories: {

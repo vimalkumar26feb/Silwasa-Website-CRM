@@ -74,6 +74,7 @@ const navGroups: NavGroup[] = [
       { label: 'Media Library', href: '/admin/media', icon: ImageIcon },
       { label: 'Enquiries', href: '/admin/enquiries', icon: MessageSquare, badge: 'Leads' },
       { label: 'Newsletter', href: '/admin/newsletter', icon: Send },
+      { label: 'Popups & Offers', href: '/admin/popups', icon: Sparkles },
     ],
   },
   {
