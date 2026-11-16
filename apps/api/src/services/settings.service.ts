@@ -5,12 +5,37 @@ import { ThemeSettings, GeneralSettings } from '@silwasa/types';
 
 export class SettingsService {
   async getPublicSettings() {
-    const [theme, branding, seo, popup] = await Promise.all([
+    const [theme, branding, seo, popupsList, singlePopup] = await Promise.all([
       settingsRepository.getSetting<ThemeSettings>('theme'),
       settingsRepository.getSetting<GeneralSettings>('branding'),
       settingsRepository.getSetting<any>('seo'),
+      settingsRepository.getSetting<any[]>('popups_list'),
       settingsRepository.getSetting<any>('popup'),
     ]);
+
+    const resolvedPopups =
+      popupsList && Array.isArray(popupsList) && popupsList.length > 0
+        ? popupsList
+        : singlePopup
+        ? [singlePopup]
+        : [];
+
+    const activePopup =
+      resolvedPopups.find((p: any) => p.isEnabled) ||
+      resolvedPopups[0] ||
+      singlePopup || {
+        isEnabled: false,
+        title: 'Exclusive Digital Architecture Consultation',
+        badge: 'LIMITED COMPLIMENTARY ACCESS',
+        description: 'Book a 1-on-1 enterprise architecture discovery session with our lead engineering team.',
+        discountCode: 'SILWASA-VIP',
+        ctaText: 'Claim Your Strategy Call',
+        ctaUrl: '/contact',
+        showNewsletterForm: true,
+        triggerType: 'timer',
+        delaySeconds: 5,
+        scrollPercentage: 30,
+      };
 
     return {
       theme: theme || DEFAULT_THEME,
@@ -23,19 +48,8 @@ export class SettingsService {
         googleTagManagerId: '',
         googleSearchConsoleVerification: '',
       },
-      popup: popup || {
-        isEnabled: false,
-        title: 'Exclusive Digital Architecture Consultation',
-        badge: 'LIMITED COMPLIMENTARY ACCESS',
-        description: 'Book a 1-on-1 enterprise architecture discovery session with our lead engineering team.',
-        discountCode: 'SILWASA-VIP',
-        ctaText: 'Claim Your Strategy Call',
-        ctaUrl: '/contact',
-        showNewsletterForm: true,
-        triggerType: 'timer',
-        delaySeconds: 5,
-        scrollPercentage: 30,
-      },
+      popup: activePopup,
+      popups: resolvedPopups,
     };
   }
 
@@ -132,24 +146,153 @@ export class SettingsService {
   }
 
   async getPopupSettings() {
-    const raw = await settingsRepository.getSetting<any>('popup');
-    return raw || {
-      isEnabled: true,
-      title: 'Accelerate Your Product Pipeline With Dedicated Senior Engineers',
-      badge: 'LIMITED ARCHITECTURE CONSULTATION',
-      description: 'Receive a custom technical review of your software architecture, Core Web Vitals, and AI search readiness from our engineering leads.',
-      discountCode: 'SILWASA-SPRINT',
-      ctaText: 'Claim Your Strategy Call',
-      ctaUrl: '/contact',
-      showNewsletterForm: true,
-      triggerType: 'timer',
-      delaySeconds: 5,
-      scrollPercentage: 35,
+    let list = await settingsRepository.getSetting<any[]>('popups_list');
+    if (!list || !Array.isArray(list) || list.length === 0) {
+      const raw = await settingsRepository.getSetting<any>('popup');
+      const initialPopup = {
+        id: raw?.id || 'popup-default',
+        name: raw?.name || 'Default Strategy Consultation Offer',
+        isEnabled: raw !== undefined && raw !== null ? Boolean(raw.isEnabled) : true,
+        title: raw?.title || 'Accelerate Your Product Pipeline With Dedicated Senior Engineers',
+        badge: raw?.badge || 'LIMITED ARCHITECTURE CONSULTATION',
+        description:
+          raw?.description ||
+          'Receive a custom technical review of your software architecture, Core Web Vitals, and AI search readiness from our engineering leads.',
+        imageUrl: raw?.imageUrl || '',
+        discountCode: raw?.discountCode || 'SILWASA-SPRINT',
+        ctaText: raw?.ctaText || 'Claim Your Strategy Call',
+        ctaUrl: raw?.ctaUrl || '/contact',
+        showNewsletterForm: raw?.showNewsletterForm !== undefined ? Boolean(raw.showNewsletterForm) : true,
+        triggerType: raw?.triggerType || 'timer',
+        delaySeconds: raw?.delaySeconds || 5,
+        scrollPercentage: raw?.scrollPercentage || 35,
+        createdAt: new Date().toISOString(),
+      };
+      list = [initialPopup];
+      await settingsRepository.setSetting('popups_list', list);
+      await settingsRepository.setSetting('popup', initialPopup);
+    }
+
+    const activePopup = list.find((p: any) => p.isEnabled) || list[0];
+    return {
+      list,
+      activePopup,
+      ...activePopup,
     };
   }
 
+  async createPopup(data: any, userId: string, userName: string) {
+    const list = (await settingsRepository.getSetting<any[]>('popups_list')) || [];
+    const newPopup = {
+      id: `popup-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      name: data.name || data.title?.substring(0, 35) || 'New Promotional Offer',
+      isEnabled: data.isEnabled !== undefined ? Boolean(data.isEnabled) : false,
+      title: data.title || 'Special Promotion',
+      badge: data.badge || 'SPECIAL OFFER',
+      description: data.description || '',
+      imageUrl: data.imageUrl || '',
+      discountCode: data.discountCode || '',
+      ctaText: data.ctaText || 'Claim Offer',
+      ctaUrl: data.ctaUrl || '/contact',
+      showNewsletterForm: data.showNewsletterForm !== undefined ? Boolean(data.showNewsletterForm) : true,
+      triggerType: data.triggerType || 'timer',
+      delaySeconds: Number(data.delaySeconds) || 5,
+      scrollPercentage: Number(data.scrollPercentage) || 35,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const updated = [newPopup, ...list];
+    await settingsRepository.setSetting('popups_list', updated);
+
+    if (newPopup.isEnabled) {
+      await settingsRepository.setSetting('popup', newPopup);
+    }
+
+    await userRepository.logActivity({
+      userId,
+      userName,
+      action: 'CREATE_POPUP',
+      module: 'SETTINGS',
+      details: { id: newPopup.id, title: newPopup.title },
+    });
+
+    return newPopup;
+  }
+
+  async updatePopup(id: string, data: any, userId: string, userName: string) {
+    const list = (await settingsRepository.getSetting<any[]>('popups_list')) || [];
+    const index = list.findIndex((p: any) => p.id === id);
+
+    if (index === -1) {
+      return this.createPopup({ ...data, id }, userId, userName);
+    }
+
+    list[index] = {
+      ...list[index],
+      ...data,
+      id,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await settingsRepository.setSetting('popups_list', list);
+
+    const activePopup = list.find((p: any) => p.isEnabled) || list[0];
+    await settingsRepository.setSetting('popup', activePopup);
+
+    await userRepository.logActivity({
+      userId,
+      userName,
+      action: 'UPDATE_POPUP',
+      module: 'SETTINGS',
+      details: { id, title: list[index].title },
+    });
+
+    return list[index];
+  }
+
+  async deletePopup(id: string, userId: string, userName: string) {
+    const list = (await settingsRepository.getSetting<any[]>('popups_list')) || [];
+    const updated = list.filter((p: any) => p.id !== id);
+    await settingsRepository.setSetting('popups_list', updated);
+
+    const activePopup = updated.find((p: any) => p.isEnabled) || updated[0] || null;
+    if (activePopup) {
+      await settingsRepository.setSetting('popup', activePopup);
+    }
+
+    await userRepository.logActivity({
+      userId,
+      userName,
+      action: 'DELETE_POPUP',
+      module: 'SETTINGS',
+      details: { id },
+    });
+
+    return { success: true };
+  }
+
   async updatePopupSettings(data: any, userId: string, userName: string) {
+    if (data.list && Array.isArray(data.list)) {
+      await settingsRepository.setSetting('popups_list', data.list);
+      const activePopup = data.list.find((p: any) => p.isEnabled) || data.list[0];
+      if (activePopup) {
+        await settingsRepository.setSetting('popup', activePopup);
+      }
+      return data;
+    }
+
     await settingsRepository.setSetting('popup', data);
+    const list = (await settingsRepository.getSetting<any[]>('popups_list')) || [];
+    const popupId = data.id || 'popup-default';
+    const index = list.findIndex((p: any) => p.id === popupId);
+    if (index >= 0) {
+      list[index] = { ...list[index], ...data };
+    } else {
+      list.push({ ...data, id: popupId });
+    }
+    await settingsRepository.setSetting('popups_list', list);
+
     await userRepository.logActivity({
       userId,
       userName,

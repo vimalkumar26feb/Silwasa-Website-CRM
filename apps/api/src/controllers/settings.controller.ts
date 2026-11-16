@@ -145,6 +145,58 @@ export class SettingsController {
     }
   }
 
+  async createPopup(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const created = await settingsService.createPopup(
+        req.body,
+        req.user!.id,
+        req.user!.name
+      );
+      res.status(201).json({
+        success: true,
+        data: created,
+        message: 'New popup created successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updatePopup(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const updated = await settingsService.updatePopup(
+        req.params.id,
+        req.body,
+        req.user!.id,
+        req.user!.name
+      );
+      res.status(200).json({
+        success: true,
+        data: updated,
+        message: 'Popup updated successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async deletePopup(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const result = await settingsService.deletePopup(
+        req.params.id,
+        req.user!.id,
+        req.user!.name
+      );
+      res.status(200).json({
+        success: true,
+        data: result,
+        message: 'Popup deleted successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async updatePopupSettings(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const updated = await settingsService.updatePopupSettings(

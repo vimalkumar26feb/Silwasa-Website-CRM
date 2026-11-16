@@ -25,6 +25,8 @@ export interface AuthSession {
 export type SectionType =
   | 'hero'
   | 'hero-carousel'
+  | 'image-carousel'
+  | 'video-carousel'
   | 'clients-partners'
   | 'about-intro'
   | 'services-grid'

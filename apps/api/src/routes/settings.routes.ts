@@ -22,6 +22,9 @@ router.put('/seo', authenticate, settingsController.updateSeoSettings);
 
 // Promotional Popups routes
 router.get('/popups', authenticate, settingsController.getPopupSettings);
+router.post('/popups', authenticate, settingsController.createPopup);
+router.put('/popups/:id', authenticate, settingsController.updatePopup);
+router.delete('/popups/:id', authenticate, settingsController.deletePopup);
 router.put('/popups', authenticate, settingsController.updatePopupSettings);
 
 // Newsletter Subscribers routes

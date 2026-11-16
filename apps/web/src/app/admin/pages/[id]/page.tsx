@@ -30,6 +30,10 @@ import {
   ToggleRight,
   Copy,
   Sparkles,
+  Image as ImageIcon,
+  Film,
+  UploadCloud,
+  Link as LinkIcon,
 } from 'lucide-react';
 
 interface AvailableSectionOption {
@@ -181,6 +185,67 @@ const AVAILABLE_SECTIONS: AvailableSectionOption[] = [
       contentHtml: '<p>Enter formatted content, technical documentation, or policy text here.</p>',
     },
   },
+  {
+    type: 'image-carousel',
+    label: 'Image Carousel & Slider',
+    category: 'Media',
+    defaultSettings: {
+      badge: 'FEATURED GALLERY & PORTFOLIO',
+      heading: 'Visual Innovation & Product Showcases',
+      subheading: 'Browse high-impact interactive visuals, product architectures, and project highlights.',
+      aspectRatio: '16/9',
+      autoplay: true,
+      autoplayInterval: 5000,
+      showArrows: true,
+      showDots: true,
+      pauseOnHover: true,
+      slides: [
+        {
+          imageUrl: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=1600&auto=format&fit=crop',
+          posterUrl: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=20&w=400&auto=format&fit=crop',
+          title: 'Enterprise Software & Cloud Platforms',
+          caption: 'Architected with Next.js 15, microservices, and 99.99% uptime guarantees.',
+          linkUrl: '/services/custom-software-development',
+          altText: 'Enterprise software architecture',
+        },
+        {
+          imageUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1600&auto=format&fit=crop',
+          posterUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=20&w=400&auto=format&fit=crop',
+          title: 'AI Solutions & Generative Engine Optimization',
+          caption: 'Position your enterprise authority directly inside ChatGPT, Claude, and Perplexity AI citations.',
+          linkUrl: '/services/ai-solutions-geo',
+          altText: 'AI and Generative Engine Optimization',
+        },
+      ],
+    },
+  },
+  {
+    type: 'video-carousel',
+    label: 'Video Carousel & Player',
+    category: 'Media',
+    defaultSettings: {
+      badge: 'INTERACTIVE MEDIA & DEMOS',
+      heading: 'Technical Demos & Architecture Walkthroughs',
+      subheading: 'High-definition video tours, case study breakdowns, and live engineering recordings.',
+      aspectRatio: '16/9',
+      autoplay: false,
+      muted: true,
+      loop: true,
+      controls: true,
+      showArrows: true,
+      showDots: true,
+      slides: [
+        {
+          videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+          thumbnailUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=1600&auto=format&fit=crop',
+          title: 'Enterprise AI Architecture & Microservices Delivery',
+          description: 'Watch how our lead engineering teams design, test, and ship distributed cloud applications with zero downtime.',
+          linkUrl: '/services/custom-software-development',
+          ctaText: 'Explore Cloud Services',
+        },
+      ],
+    },
+  },
 ];
 
 export default function PageBuilderPage({ params }: { params: Promise<{ id: string }> }) {
@@ -196,6 +261,33 @@ export default function PageBuilderPage({ params }: { params: Promise<{ id: stri
 
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const [uploadingAsset, setUploadingAsset] = useState(false);
+
+  const handleUploadAsset = async (file: File, onUploaded: (url: string) => void) => {
+    try {
+      setUploadingAsset(true);
+      const data = new FormData();
+      data.append('file', file);
+      const token = typeof window !== 'undefined' ? sessionStorage.getItem('silwasa_token') : null;
+      const res = await fetch('http://localhost:5000/api/v1/admin/media/upload', {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include',
+        body: data,
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data?.url) {
+          onUploaded(json.data.url);
+        }
+      }
+    } catch {
+      // Ignore
+    } finally {
+      setUploadingAsset(false);
+    }
+  };
 
   // SEO Form State
   const [seoData, setSeoData] = useState<SEOMetadata>({
@@ -893,6 +985,492 @@ export default function PageBuilderPage({ params }: { params: Promise<{ id: stri
                                   </div>
                                 ))
                               )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Image Carousel Inspector */}
+                      {selectedSection.type === 'image-carousel' && (() => {
+                        const slides: any[] = Array.isArray(settings.slides) ? settings.slides : [];
+
+                        const handleAddSlide = () => {
+                          const updated = [
+                            ...slides,
+                            {
+                              imageUrl: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=1600&auto=format&fit=crop',
+                              posterUrl: '',
+                              title: 'New Slide Showcase',
+                              caption: 'Describe this slide or highlight key product features.',
+                              linkUrl: '/contact',
+                              altText: 'Slide visual',
+                            },
+                          ];
+                          handleUpdateSetting('slides', updated);
+                        };
+
+                        const handleUpdateSlide = (idx: number, field: string, val: any) => {
+                          const updated = [...slides];
+                          updated[idx] = { ...updated[idx], [field]: val };
+                          handleUpdateSetting('slides', updated);
+                        };
+
+                        const handleRemoveSlide = (idx: number) => {
+                          const updated = slides.filter((_, i) => i !== idx);
+                          handleUpdateSetting('slides', updated);
+                        };
+
+                        return (
+                          <div className="space-y-4 pt-3 border-t border-[#2A2B28]">
+                            <div className="space-y-2">
+                              <label className="block text-xs font-bold text-[#D9F45F] uppercase tracking-wider">
+                                Image Carousel Display Settings
+                              </label>
+
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="block text-[11px] text-white/70 mb-1">Aspect Ratio</label>
+                                  <select
+                                    value={settings.aspectRatio || '16/9'}
+                                    onChange={(e) => handleUpdateSetting('aspectRatio', e.target.value)}
+                                    className="w-full px-2.5 py-1.5 rounded-lg bg-[#151414] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#D9F45F]"
+                                  >
+                                    <option value="16/9">16:9 Widescreen (Standard)</option>
+                                    <option value="21/9">21:9 Cinema Ultra-wide</option>
+                                    <option value="4/3">4:3 Classic</option>
+                                    <option value="auto">Auto Adaptive Height</option>
+                                  </select>
+                                </div>
+
+                                <div>
+                                  <label className="block text-[11px] text-white/70 mb-1">Slide Interval (ms)</label>
+                                  <Input
+                                    type="number"
+                                    min={1000}
+                                    step={500}
+                                    value={settings.autoplayInterval || 5000}
+                                    onChange={(e) => handleUpdateSetting('autoplayInterval', parseInt(e.target.value) || 5000)}
+                                    className="h-8 text-xs"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-3 gap-2 pt-1 text-[11px] text-white/80">
+                                <label className="flex items-center gap-1.5 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={settings.autoplay !== false}
+                                    onChange={(e) => handleUpdateSetting('autoplay', e.target.checked)}
+                                    className="w-3.5 h-3.5 rounded text-[#663399]"
+                                  />
+                                  <span>Autoplay</span>
+                                </label>
+                                <label className="flex items-center gap-1.5 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={settings.showArrows !== false}
+                                    onChange={(e) => handleUpdateSetting('showArrows', e.target.checked)}
+                                    className="w-3.5 h-3.5 rounded text-[#663399]"
+                                  />
+                                  <span>Arrows</span>
+                                </label>
+                                <label className="flex items-center gap-1.5 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={settings.showDots !== false}
+                                    onChange={(e) => handleUpdateSetting('showDots', e.target.checked)}
+                                    className="w-3.5 h-3.5 rounded text-[#663399]"
+                                  />
+                                  <span>Dots</span>
+                                </label>
+                              </div>
+                            </div>
+
+                            {/* Slides List */}
+                            <div className="space-y-3 pt-2 border-t border-[#2A2B28]">
+                              <div className="flex items-center justify-between">
+                                <label className="block text-xs font-bold text-white uppercase tracking-wider">
+                                  Image Slides ({slides.length})
+                                </label>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={handleAddSlide}
+                                  className="h-7 text-[11px] px-2.5"
+                                >
+                                  <Plus className="w-3 h-3 mr-1" />
+                                  Add Image Slide
+                                </Button>
+                              </div>
+
+                              <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+                                {slides.map((slide, sIdx) => (
+                                  <div
+                                    key={sIdx}
+                                    className="p-3 rounded-xl bg-[#151414] border border-[#2A2B28] space-y-2.5 text-xs"
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-[10px] font-bold text-[#D9F45F] font-mono">
+                                        Slide #{sIdx + 1}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveSlide(sIdx)}
+                                        className="text-red-400 hover:text-red-300 p-0.5"
+                                        title="Delete Slide"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+
+                                    {/* Main Image URL & Upload */}
+                                    <div>
+                                      <label className="block text-[10px] font-semibold text-white/70 mb-1">
+                                        Image URL (or upload) *
+                                      </label>
+                                      <div className="flex items-center gap-2">
+                                        <input
+                                          type="text"
+                                          value={slide.imageUrl || ''}
+                                          onChange={(e) => handleUpdateSlide(sIdx, 'imageUrl', e.target.value)}
+                                          placeholder="https://..."
+                                          className="w-full px-2.5 py-1.5 rounded-lg bg-[#1C1B1B] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#D9F45F]"
+                                        />
+                                        <label className="px-2 py-1.5 rounded-lg bg-[#663399]/20 hover:bg-[#663399]/40 border border-[#663399]/50 text-white text-xs font-medium cursor-pointer shrink-0 transition flex items-center gap-1">
+                                          <UploadCloud className="w-3.5 h-3.5 text-[#D9F45F]" />
+                                          <span>Upload</span>
+                                          <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={(e) => {
+                                              const file = e.target.files?.[0];
+                                              if (file) {
+                                                handleUploadAsset(file, (url) => handleUpdateSlide(sIdx, 'imageUrl', url));
+                                              }
+                                            }}
+                                          />
+                                        </label>
+                                      </div>
+                                    </div>
+
+                                    {/* Poster / Low-res Placeholder URL */}
+                                    <div>
+                                      <label className="block text-[10px] font-semibold text-white/70 mb-1">
+                                        Poster / Preview Image (Optional)
+                                      </label>
+                                      <div className="flex items-center gap-2">
+                                        <input
+                                          type="text"
+                                          value={slide.posterUrl || ''}
+                                          onChange={(e) => handleUpdateSlide(sIdx, 'posterUrl', e.target.value)}
+                                          placeholder="https://... (low-res preview or poster)"
+                                          className="w-full px-2.5 py-1.5 rounded-lg bg-[#1C1B1B] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#D9F45F]"
+                                        />
+                                        <label className="px-2 py-1.5 rounded-lg bg-[#1C1B1B] hover:bg-[#2A2B28] border border-[#2A2B28] text-white/70 hover:text-white text-xs font-medium cursor-pointer shrink-0 transition flex items-center gap-1">
+                                          <UploadCloud className="w-3.5 h-3.5 text-white/50" />
+                                          <span>Upload</span>
+                                          <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={(e) => {
+                                              const file = e.target.files?.[0];
+                                              if (file) {
+                                                handleUploadAsset(file, (url) => handleUpdateSlide(sIdx, 'posterUrl', url));
+                                              }
+                                            }}
+                                          />
+                                        </label>
+                                      </div>
+                                    </div>
+
+                                    {/* Title & Link */}
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div>
+                                        <label className="block text-[10px] font-semibold text-white/70 mb-1">
+                                          Slide Title
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={slide.title || ''}
+                                          onChange={(e) => handleUpdateSlide(sIdx, 'title', e.target.value)}
+                                          placeholder="Title..."
+                                          className="w-full px-2.5 py-1.5 rounded-lg bg-[#1C1B1B] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#D9F45F]"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-[10px] font-semibold text-white/70 mb-1">
+                                          Slide Link URL (Clickable)
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={slide.linkUrl || ''}
+                                          onChange={(e) => handleUpdateSlide(sIdx, 'linkUrl', e.target.value)}
+                                          placeholder="/services or https://..."
+                                          className="w-full px-2.5 py-1.5 rounded-lg bg-[#1C1B1B] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#D9F45F]"
+                                        />
+                                      </div>
+                                    </div>
+
+                                    {/* Caption */}
+                                    <div>
+                                      <label className="block text-[10px] font-semibold text-white/70 mb-1">
+                                        Caption / Description
+                                      </label>
+                                      <textarea
+                                        rows={2}
+                                        value={slide.caption || ''}
+                                        onChange={(e) => handleUpdateSlide(sIdx, 'caption', e.target.value)}
+                                        placeholder="Brief descriptive text..."
+                                        className="w-full px-2.5 py-1.5 rounded-lg bg-[#1C1B1B] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#D9F45F]"
+                                      />
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Video Carousel Inspector */}
+                      {selectedSection.type === 'video-carousel' && (() => {
+                        const slides: any[] = Array.isArray(settings.slides) ? settings.slides : [];
+
+                        const handleAddVideoSlide = () => {
+                          const updated = [
+                            ...slides,
+                            {
+                              videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+                              thumbnailUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=1600&auto=format&fit=crop',
+                              title: 'New Video Feature',
+                              description: 'Watch the full walkthrough of our engineering capabilities.',
+                              linkUrl: '/contact',
+                              ctaText: 'Get Started',
+                            },
+                          ];
+                          handleUpdateSetting('slides', updated);
+                        };
+
+                        const handleUpdateVideoSlide = (idx: number, field: string, val: any) => {
+                          const updated = [...slides];
+                          updated[idx] = { ...updated[idx], [field]: val };
+                          handleUpdateSetting('slides', updated);
+                        };
+
+                        const handleRemoveVideoSlide = (idx: number) => {
+                          const updated = slides.filter((_, i) => i !== idx);
+                          handleUpdateSetting('slides', updated);
+                        };
+
+                        return (
+                          <div className="space-y-4 pt-3 border-t border-[#2A2B28]">
+                            <div className="space-y-2">
+                              <label className="block text-xs font-bold text-[#D9F45F] uppercase tracking-wider">
+                                Video Carousel &amp; Player Settings (Cross-Browser)
+                              </label>
+
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="block text-[11px] text-white/70 mb-1">Aspect Ratio</label>
+                                  <select
+                                    value={settings.aspectRatio || '16/9'}
+                                    onChange={(e) => handleUpdateSetting('aspectRatio', e.target.value)}
+                                    className="w-full px-2.5 py-1.5 rounded-lg bg-[#151414] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#D9F45F]"
+                                  >
+                                    <option value="16/9">16:9 Widescreen (Standard)</option>
+                                    <option value="21/9">21:9 Cinema Ultra-wide</option>
+                                    <option value="4/3">4:3 Classic Video</option>
+                                  </select>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-[11px] text-white/80">
+                                <label className="flex items-center gap-1.5 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={settings.autoplay === true}
+                                    onChange={(e) => handleUpdateSetting('autoplay', e.target.checked)}
+                                    className="w-3.5 h-3.5 rounded text-[#663399]"
+                                  />
+                                  <span>Autoplay</span>
+                                </label>
+                                <label className="flex items-center gap-1.5 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={settings.muted !== false}
+                                    onChange={(e) => handleUpdateSetting('muted', e.target.checked)}
+                                    className="w-3.5 h-3.5 rounded text-[#663399]"
+                                  />
+                                  <span>Muted (iOS safe)</span>
+                                </label>
+                                <label className="flex items-center gap-1.5 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={settings.loop !== false}
+                                    onChange={(e) => handleUpdateSetting('loop', e.target.checked)}
+                                    className="w-3.5 h-3.5 rounded text-[#663399]"
+                                  />
+                                  <span>Loop Video</span>
+                                </label>
+                                <label className="flex items-center gap-1.5 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={settings.controls !== false}
+                                    onChange={(e) => handleUpdateSetting('controls', e.target.checked)}
+                                    className="w-3.5 h-3.5 rounded text-[#663399]"
+                                  />
+                                  <span>Controls</span>
+                                </label>
+                              </div>
+                            </div>
+
+                            {/* Video Slides List */}
+                            <div className="space-y-3 pt-2 border-t border-[#2A2B28]">
+                              <div className="flex items-center justify-between">
+                                <label className="block text-xs font-bold text-white uppercase tracking-wider">
+                                  Video Slides ({slides.length})
+                                </label>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={handleAddVideoSlide}
+                                  className="h-7 text-[11px] px-2.5"
+                                >
+                                  <Plus className="w-3 h-3 mr-1" />
+                                  Add Video Slide
+                                </Button>
+                              </div>
+
+                              <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+                                {slides.map((slide, vIdx) => (
+                                  <div
+                                    key={vIdx}
+                                    className="p-3 rounded-xl bg-[#151414] border border-[#2A2B28] space-y-2.5 text-xs"
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-[10px] font-bold text-[#D9F45F] font-mono">
+                                        Video #{vIdx + 1}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveVideoSlide(vIdx)}
+                                        className="text-red-400 hover:text-red-300 p-0.5"
+                                        title="Delete Video"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+
+                                    {/* Video URL & Upload */}
+                                    <div>
+                                      <label className="block text-[10px] font-semibold text-white/70 mb-1">
+                                        Video URL (MP4, WebM, or YouTube/Vimeo) *
+                                      </label>
+                                      <div className="flex items-center gap-2">
+                                        <input
+                                          type="text"
+                                          value={slide.videoUrl || ''}
+                                          onChange={(e) => handleUpdateVideoSlide(vIdx, 'videoUrl', e.target.value)}
+                                          placeholder="https://...mp4 or https://youtube.com/..."
+                                          className="w-full px-2.5 py-1.5 rounded-lg bg-[#1C1B1B] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#D9F45F]"
+                                        />
+                                        <label className="px-2 py-1.5 rounded-lg bg-[#663399]/20 hover:bg-[#663399]/40 border border-[#663399]/50 text-white text-xs font-medium cursor-pointer shrink-0 transition flex items-center gap-1">
+                                          <UploadCloud className="w-3.5 h-3.5 text-[#D9F45F]" />
+                                          <span>Upload</span>
+                                          <input
+                                            type="file"
+                                            accept="video/*"
+                                            className="hidden"
+                                            onChange={(e) => {
+                                              const file = e.target.files?.[0];
+                                              if (file) {
+                                                handleUploadAsset(file, (url) => handleUpdateVideoSlide(vIdx, 'videoUrl', url));
+                                              }
+                                            }}
+                                          />
+                                        </label>
+                                      </div>
+                                    </div>
+
+                                    {/* Thumbnail / Poster Image URL */}
+                                    <div>
+                                      <label className="block text-[10px] font-semibold text-white/70 mb-1">
+                                        Video Thumbnail / Poster Image *
+                                      </label>
+                                      <div className="flex items-center gap-2">
+                                        <input
+                                          type="text"
+                                          value={slide.thumbnailUrl || ''}
+                                          onChange={(e) => handleUpdateVideoSlide(vIdx, 'thumbnailUrl', e.target.value)}
+                                          placeholder="https://... (JPG, PNG, WebP)"
+                                          className="w-full px-2.5 py-1.5 rounded-lg bg-[#1C1B1B] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#D9F45F]"
+                                        />
+                                        <label className="px-2 py-1.5 rounded-lg bg-[#1C1B1B] hover:bg-[#2A2B28] border border-[#2A2B28] text-white/70 hover:text-white text-xs font-medium cursor-pointer shrink-0 transition flex items-center gap-1">
+                                          <UploadCloud className="w-3.5 h-3.5 text-white/50" />
+                                          <span>Upload</span>
+                                          <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={(e) => {
+                                              const file = e.target.files?.[0];
+                                              if (file) {
+                                                handleUploadAsset(file, (url) => handleUpdateVideoSlide(vIdx, 'thumbnailUrl', url));
+                                              }
+                                            }}
+                                          />
+                                        </label>
+                                      </div>
+                                    </div>
+
+                                    {/* Title & Link */}
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div>
+                                        <label className="block text-[10px] font-semibold text-white/70 mb-1">
+                                          Video Title
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={slide.title || ''}
+                                          onChange={(e) => handleUpdateVideoSlide(vIdx, 'title', e.target.value)}
+                                          placeholder="Title..."
+                                          className="w-full px-2.5 py-1.5 rounded-lg bg-[#1C1B1B] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#D9F45F]"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-[10px] font-semibold text-white/70 mb-1">
+                                          CTA Destination URL
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={slide.linkUrl || ''}
+                                          onChange={(e) => handleUpdateVideoSlide(vIdx, 'linkUrl', e.target.value)}
+                                          placeholder="/contact"
+                                          className="w-full px-2.5 py-1.5 rounded-lg bg-[#1C1B1B] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#D9F45F]"
+                                        />
+                                      </div>
+                                    </div>
+
+                                    {/* Description */}
+                                    <div>
+                                      <label className="block text-[10px] font-semibold text-white/70 mb-1">
+                                        Video Description / Overview
+                                      </label>
+                                      <textarea
+                                        rows={2}
+                                        value={slide.description || ''}
+                                        onChange={(e) => handleUpdateVideoSlide(vIdx, 'description', e.target.value)}
+                                        placeholder="Brief summary of what this video demonstrates..."
+                                        className="w-full px-2.5 py-1.5 rounded-lg bg-[#1C1B1B] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#D9F45F]"
+                                      />
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           </div>
                         );

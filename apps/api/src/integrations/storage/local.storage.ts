@@ -19,8 +19,25 @@ export class LocalStorageProvider implements StorageProvider {
       .basename(file.originalname, ext)
       .toLowerCase()
       .replace(/[^a-z0-9_-]/g, '-');
-    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}-${baseName}${ext}`;
-    const destinationPath = path.join(this.uploadDir, uniqueName);
+
+    let uniqueName = `${baseName}${ext}`;
+    let destinationPath = path.join(this.uploadDir, uniqueName);
+
+    // If file already exists on disk, append postfix like -01, -02 or timestamp at the end of filename
+    if (fs.existsSync(destinationPath)) {
+      let counter = 1;
+      let candidate = `${baseName}-${String(counter).padStart(2, '0')}${ext}`;
+      while (fs.existsSync(path.join(this.uploadDir, candidate))) {
+        counter++;
+        candidate = `${baseName}-${String(counter).padStart(2, '0')}${ext}`;
+        if (counter > 99) {
+          candidate = `${baseName}-${Date.now()}${ext}`;
+          break;
+        }
+      }
+      uniqueName = candidate;
+      destinationPath = path.join(this.uploadDir, uniqueName);
+    }
 
     await fs.promises.writeFile(destinationPath, file.buffer);
 

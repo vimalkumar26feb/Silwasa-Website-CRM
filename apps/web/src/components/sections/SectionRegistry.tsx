@@ -15,6 +15,8 @@ import { FaqSection } from './FaqSection';
 import { CtaSection } from './CtaSection';
 import { ContactSection } from './ContactSection';
 import { RichTextSection } from './RichTextSection';
+import { ImageCarouselSection } from './ImageCarouselSection';
+import { VideoCarouselSection } from './VideoCarouselSection';
 
 interface SectionRendererProps {
   section: PageSection;
@@ -29,6 +31,12 @@ export function renderSection(section: PageSection): React.ReactNode {
     case 'hero':
     case 'hero-carousel':
       return <HeroSection key={section.id} settings={settings} />;
+
+    case 'image-carousel':
+      return <ImageCarouselSection key={section.id} settings={settings} />;
+
+    case 'video-carousel':
+      return <VideoCarouselSection key={section.id} settings={settings} />;
 
     case 'services-grid':
     case 'featured-services':
