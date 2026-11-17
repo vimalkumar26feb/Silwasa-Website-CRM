@@ -12,7 +12,7 @@ export class MediaService {
       throw err;
     }
 
-    // Supported file types validation
+    // Supported file types validation (images, videos, documents)
     const allowedMimeTypes = [
       'image/jpeg',
       'image/png',
@@ -20,20 +20,26 @@ export class MediaService {
       'image/svg+xml',
       'image/gif',
       'application/pdf',
+      'video/mp4',
+      'video/webm',
+      'video/ogg',
+      'video/quicktime',
+      'video/x-msvideo',
+      'video/mpeg',
     ];
 
     if (!allowedMimeTypes.includes(file.mimetype)) {
       const err: AppError = new Error(
-        `Unsupported file format (${file.mimetype}). Allowed formats: JPG, PNG, WebP, SVG, GIF, PDF.`
+        `Unsupported file format (${file.mimetype}). Allowed formats: JPG, PNG, WebP, SVG, GIF, MP4, WebM, OGG, MOV, PDF.`
       );
       err.statusCode = 400;
       throw err;
     }
 
-    // 10 MB size restriction
-    const maxSizeBytes = 10 * 1024 * 1024;
+    // 100 MB size restriction for video and media assets
+    const maxSizeBytes = 100 * 1024 * 1024;
     if (file.size > maxSizeBytes) {
-      const err: AppError = new Error('File exceeds maximum allowed size of 10 MB.');
+      const err: AppError = new Error('File exceeds maximum allowed size of 100 MB.');
       err.statusCode = 400;
       throw err;
     }
@@ -154,6 +160,53 @@ export class MediaService {
     });
 
     return true;
+  }
+
+  async bulkDelete(ids: string[], userId: string, userName: string) {
+    if (!ids || ids.length === 0) {
+      return { deletedCount: 0, skippedCount: 0 };
+    }
+
+    const items = await mediaRepository.findByIds(ids);
+    const storage = getStorageProvider();
+
+    let deletedCount = 0;
+    let skippedCount = 0;
+    const deletedIds: string[] = [];
+
+    for (const item of items) {
+      // Prevent deleting media in active use across published items
+      if (item.usageCount > 0) {
+        skippedCount++;
+        continue;
+      }
+
+      if (item.publicId || item.url) {
+        try {
+          await storage.deleteFile(item.publicId || item.url);
+        } catch {
+          // File might already be gone on disk/CDN
+        }
+      }
+
+      deletedIds.push(item.id);
+      deletedCount++;
+    }
+
+    if (deletedIds.length > 0) {
+      await mediaRepository.deleteMany(deletedIds);
+
+      await userRepository.logActivity({
+        userId,
+        userName,
+        action: 'BULK_DELETE_MEDIA',
+        module: 'MEDIA',
+        entityId: deletedIds[0],
+        details: { count: deletedCount, ids: deletedIds },
+      });
+    }
+
+    return { deletedCount, skippedCount };
   }
 }
 

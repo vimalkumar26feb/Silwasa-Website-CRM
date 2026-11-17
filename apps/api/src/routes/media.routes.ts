@@ -6,7 +6,7 @@ import { authenticate } from '../middleware/auth.js';
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB
+    fileSize: 100 * 1024 * 1024, // 100MB
   },
 });
 
@@ -17,6 +17,7 @@ router.use(authenticate);
 
 router.get('/', mediaController.listMedia);
 router.post('/upload', upload.single('file'), mediaController.upload);
+router.post('/bulk-delete', mediaController.bulkDelete);
 router.put('/:id', mediaController.updateMedia);
 router.delete('/:id', mediaController.deleteMedia);
 

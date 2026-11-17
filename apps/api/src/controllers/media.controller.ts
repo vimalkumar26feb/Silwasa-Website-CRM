@@ -85,6 +85,30 @@ export class MediaController {
       next(error);
     }
   }
+
+  async bulkDelete(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { ids } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        res.status(400).json({ success: false, message: 'Please provide an array of media IDs to delete' });
+        return;
+      }
+
+      const result = await mediaService.bulkDelete(
+        ids,
+        req.user!.id,
+        req.user!.name
+      );
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        message: `Successfully deleted ${result.deletedCount} media asset${result.deletedCount === 1 ? '' : 's'}${result.skippedCount > 0 ? ` (${result.skippedCount} skipped due to active usage)` : ''}`,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export const mediaController = new MediaController();

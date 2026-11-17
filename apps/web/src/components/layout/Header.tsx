@@ -28,6 +28,18 @@ import {
   Briefcase,
   Zap,
   Cloud,
+  Database,
+  Server,
+  Terminal,
+  Folder,
+  FileText,
+  CheckCircle,
+  BarChart,
+  Settings,
+  Mail,
+  Bell,
+  Star,
+  Users,
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import type { Menu, MenuItem } from '@silwasa/types';
@@ -220,10 +232,71 @@ function getMenuItemIcon(label: string) {
   return Layers;
 }
 
+function getCustomOrNamedIcon(iconName?: string, label?: string) {
+  if (iconName) {
+    const key = iconName.toLowerCase().trim().replace(/[-_\s]+/g, '');
+    const map: Record<string, React.ComponentType<{ className?: string }>> = {
+      code: Code2,
+      code2: Code2,
+      software: Code2,
+      terminal: Terminal,
+      cpu: Cpu,
+      ai: Cpu,
+      chip: Cpu,
+      globe: Globe,
+      web: Globe,
+      cart: ShoppingCart,
+      shoppingcart: ShoppingCart,
+      ecommerce: ShoppingCart,
+      phone: Smartphone,
+      smartphone: Smartphone,
+      mobile: Smartphone,
+      search: Search,
+      seo: Search,
+      sparkles: Sparkles,
+      cloud: Cloud,
+      database: Database,
+      server: Server,
+      shield: ShieldCheck,
+      shieldcheck: ShieldCheck,
+      security: ShieldCheck,
+      zap: Zap,
+      layers: Layers,
+      stethoscope: Stethoscope,
+      health: Stethoscope,
+      landmark: Landmark,
+      bank: Landmark,
+      building: Building2,
+      building2: Building2,
+      truck: Truck,
+      logistics: Truck,
+      graduationcap: GraduationCap,
+      education: GraduationCap,
+      folder: Folder,
+      filetext: FileText,
+      check: CheckCircle,
+      barchart: BarChart,
+      settings: Settings,
+      mail: Mail,
+      bell: Bell,
+      star: Star,
+      users: Users,
+    };
+    if (map[key]) return map[key];
+  }
+  return getMenuItemIcon(label || '');
+}
+
 export function Header() {
   const pathname = usePathname();
   const [items, setItems] = useState<MenuItem[]>(DEFAULT_HEADER_ITEMS);
-  const [brandLogo, setBrandLogo] = useState<string | null>(null);
+  const [brandLogo, setBrandLogo] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('silwasa_brand_logo') || null;
+    }
+    return null;
+  });
+  const [settingsLoaded, setSettingsLoaded] = useState<boolean>(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeMegaMenuId, setActiveMegaMenuId] = useState<string | null>(null);
   const [mobileExpandedId, setMobileExpandedId] = useState<string | null>(null);
@@ -256,12 +329,23 @@ export function Header() {
         const setRes = await fetch(`${apiUrl}/settings/public`);
         if (setRes.ok) {
           const setData = await setRes.json();
-          if (setData.data?.general?.logoUrl) {
-            setBrandLogo(setData.data.general.logoUrl);
+          const logoUrl = setData.data?.general?.logoUrl;
+          if (logoUrl) {
+            setBrandLogo(logoUrl);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('silwasa_brand_logo', logoUrl);
+            }
+          } else {
+            setBrandLogo(null);
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('silwasa_brand_logo');
+            }
           }
         }
       } catch {
         // Fallback
+      } finally {
+        setSettingsLoaded(true);
       }
     }
 
@@ -274,6 +358,10 @@ export function Header() {
     setActiveMegaMenuId(null);
   }, [pathname]);
 
+  const activeMegaItem = items.find(
+    (it) => it.id === activeMegaMenuId && it.isMegaMenu && it.megaMenuColumns && it.megaMenuColumns.length > 0
+  );
+
   return (
     <header
       className={`sticky top-0 z-50 w-full transition-all duration-300 ${
@@ -283,16 +371,18 @@ export function Header() {
       }`}
       onMouseLeave={() => setActiveMegaMenuId(null)}
     >
-      <div className="max-w-[1369px] mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[1369px] mx-auto px-4 sm:px-6 lg:px-8 relative">
         <div className="flex items-center justify-between h-20">
-          {/* Brand Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
+          {/* Brand Logo - Prioritizes logo first, zero flash of text */}
+          <Link href="/" className="flex items-center gap-2 group min-h-[40px] min-w-[140px]">
             {brandLogo ? (
               <img
                 src={brandLogo}
                 alt="Silwasa IT Solutions"
                 className="h-10 w-auto max-w-[200px] object-contain rounded-lg"
               />
+            ) : !settingsLoaded ? (
+              <div className="h-10 w-36 rounded-lg bg-white/[0.04] animate-pulse" />
             ) : (
               <>
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#663399] to-[#8040bf] flex items-center justify-center text-white font-extrabold text-xl shadow-md shadow-[#663399]/20 group-hover:scale-105 transition-transform">
@@ -324,7 +414,6 @@ export function Header() {
                   return (
                     <div
                       key={item.id}
-                      className="relative"
                       onMouseEnter={() => setActiveMegaMenuId(item.id)}
                     >
                       <button
@@ -344,92 +433,6 @@ export function Header() {
                           }`}
                         />
                       </button>
-
-                      {/* Mega Menu Dropdown */}
-                      {isMegaOpen && (
-                        <div
-                          className="absolute left-1/2 -translate-x-1/2 top-full pt-3 w-[94vw] max-w-[880px] max-h-[85vh] overflow-y-auto z-50 animate-in fade-in slide-in-from-top-2 duration-200"
-                          onMouseEnter={() => setActiveMegaMenuId(item.id)}
-                        >
-                          <div className="rounded-3xl bg-[#1C1B1B]/95 backdrop-blur-xl border border-[#2A2B28] p-6 sm:p-8 shadow-2xl grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-                            {/* Left Columns (8 cols) */}
-                            <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
-                              {item.megaMenuColumns.map((col, colIdx) => (
-                                <div key={colIdx} className="space-y-4">
-                                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#D9F45F]">
-                                    {col.heading}
-                                  </h4>
-                                  <div className="space-y-2.5">
-                                    {col.links.map((link, lIdx) => {
-                                      const IconComp = getMenuItemIcon(link.label);
-                                      return (
-                                        <Link
-                                          key={lIdx}
-                                          href={link.url}
-                                          className="group/link flex items-start gap-3 p-2.5 rounded-xl hover:bg-[#151414] transition border border-transparent hover:border-[#2A2B28]"
-                                        >
-                                          <div className="w-8 h-8 rounded-lg bg-[#663399]/20 border border-[#663399]/30 flex items-center justify-center text-[#D9F45F] shrink-0 group-hover/link:bg-[#D9F45F]/20 group-hover/link:border-[#D9F45F]/40 transition-colors mt-0.5">
-                                            <IconComp className="w-4 h-4" />
-                                          </div>
-                                          <div className="flex-1 min-w-0">
-                                            <div className="flex items-center justify-between gap-1.5">
-                                              <span className="text-sm font-bold text-white group-hover/link:text-[#D9F45F] transition-colors truncate">
-                                                {link.label}
-                                              </span>
-                                              {link.badge && (
-                                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#D9F45F]/15 text-[#D9F45F] shrink-0">
-                                                  {link.badge}
-                                                </span>
-                                              )}
-                                            </div>
-                                            {link.description && (
-                                              <p className="text-xs text-white/60 mt-0.5 line-clamp-2 leading-relaxed">
-                                                {link.description}
-                                              </p>
-                                            )}
-                                          </div>
-                                        </Link>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-
-                            {/* Right Featured Card (4 cols) */}
-                            <div className="lg:col-span-4 rounded-2xl bg-[#151414] border border-[#2A2B28] p-5 sm:p-6 flex flex-col justify-between">
-                              <div className="space-y-3">
-                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#663399]/30 border border-[#663399]/40 text-[#D9F45F] text-[10px] font-bold uppercase tracking-wider">
-                                  <Sparkles className="w-3 h-3" />
-                                  <span>Featured Innovation</span>
-                                </div>
-                                <h5 className="text-base font-bold text-white leading-snug">
-                                  {item.megaMenuColumns[0]?.featuredItem?.title ||
-                                    'Generative Engine Optimization (GEO)'}
-                                </h5>
-                                <p className="text-xs text-white/60 leading-relaxed">
-                                  {item.megaMenuColumns[0]?.featuredItem?.description ||
-                                    'Architecting high-intent entity schemas and authority content cited by ChatGPT and Perplexity.'}
-                                </p>
-                              </div>
-
-                              <Link
-                                href={
-                                  item.megaMenuColumns[0]?.featuredItem?.ctaUrl ||
-                                  item.url
-                                }
-                                className="inline-flex items-center gap-2 text-xs font-bold text-[#D9F45F] hover:underline pt-4 border-t border-[#2A2B28]"
-                              >
-                                <span>
-                                  {item.megaMenuColumns[0]?.featuredItem?.ctaLabel ||
-                                    'Explore Capabilities'}
-                                </span>
-                                <ArrowRight className="w-3.5 h-3.5" />
-                              </Link>
-                            </div>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   );
                 }
@@ -456,22 +459,26 @@ export function Header() {
               })}
           </nav>
 
-          {/* Right Action / Contact */}
-          <div className="hidden sm:flex items-center gap-3">
-            <a
-              href="https://wa.me/917070717794"
+          {/* Right Action Buttons */}
+          <div className="hidden lg:flex items-center gap-3">
+            <Link
+              href="https://wa.me/919999999999"
               target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-[#2A2B28] bg-[#1C1B1B] text-white/80 hover:text-white hover:border-emerald-500 text-xs font-semibold transition"
+              className="p-2.5 rounded-full bg-[#1C1B1B] border border-[#2A2B28] text-emerald-400 hover:text-emerald-300 hover:border-emerald-500/40 transition"
               title="Chat on WhatsApp"
             >
-              <MessageCircle className="w-4 h-4 text-emerald-400" />
-              <span className="hidden xl:inline">WhatsApp</span>
-            </a>
-
+              <MessageCircle className="w-4 h-4" />
+            </Link>
+            <Link
+              href="tel:+919999999999"
+              className="p-2.5 rounded-full bg-[#1C1B1B] border border-[#2A2B28] text-white/80 hover:text-white hover:border-[#D9F45F]/40 transition"
+              title="Direct Phone Call"
+            >
+              <Phone className="w-4 h-4" />
+            </Link>
             <Link href="/contact">
-              <Button variant="primary" size="sm" className="rounded-full shadow-md shadow-[#663399]/20">
-                <span>Get In Touch</span>
+              <Button variant="primary" size="sm" className="rounded-full shadow-lg shadow-[#663399]/30">
+                <span>Start Project</span>
                 <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
               </Button>
             </Link>
@@ -488,6 +495,130 @@ export function Header() {
             </button>
           </div>
         </div>
+
+        {/* FULL WIDTH & CENTERED MEGA MENU DROPDOWN */}
+        {activeMegaItem && (() => {
+          const colCount = activeMegaItem.megaMenuColumnCount || Math.min(5, Math.max(2, activeMegaItem.megaMenuColumns?.length || 2));
+          const gridMap: Record<number, string> = {
+            2: 'grid-cols-1 sm:grid-cols-2',
+            3: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+            4: 'grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4',
+            5: 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5',
+          };
+          const gridClass = gridMap[colCount] || gridMap[2];
+          const featuredCard = activeMegaItem.megaMenuColumns?.find(
+            (c) => c.featuredItem?.title || c.featuredItem?.description
+          )?.featuredItem;
+          const hasFeaturedCard = Boolean(featuredCard?.title || featuredCard?.description);
+
+          return (
+            <div
+              className="absolute left-1/2 -translate-x-1/2 top-full pt-2 w-[98vw] max-w-[1340px] max-h-[85vh] overflow-y-auto z-50 animate-in fade-in slide-in-from-top-2 duration-200"
+              onMouseEnter={() => setActiveMegaMenuId(activeMegaItem.id)}
+              onMouseLeave={() => setActiveMegaMenuId(null)}
+            >
+              <div
+                className={`rounded-3xl bg-[#1C1B1B]/95 backdrop-blur-xl border border-[#2A2B28] p-6 sm:p-8 shadow-2xl ${
+                  hasFeaturedCard ? 'grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8' : ''
+                }`}
+              >
+                {/* Dynamic Columns (2, 3, 4, 5) */}
+                <div
+                  className={`${
+                    hasFeaturedCard ? (colCount >= 4 ? 'lg:col-span-9' : 'lg:col-span-8') : 'w-full'
+                  } grid ${gridClass} gap-6 sm:gap-8`}
+                >
+                  {activeMegaItem.megaMenuColumns?.map((col, colIdx) => (
+                    <div key={colIdx} className="space-y-4">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#D9F45F]">
+                        {col.heading}
+                      </h4>
+                      <div className="space-y-2.5">
+                        {col.links.map((link, lIdx) => (
+                          <Link
+                            key={lIdx}
+                            href={link.url}
+                            className="group/link flex items-start gap-3 p-2.5 rounded-xl hover:bg-[#151414] transition border border-transparent hover:border-[#2A2B28]"
+                          >
+                            <div className="w-8 h-8 rounded-lg bg-[#663399]/20 border border-[#663399]/30 flex items-center justify-center text-[#D9F45F] shrink-0 group-hover/link:bg-[#D9F45F]/20 group-hover/link:border-[#D9F45F]/40 transition-colors mt-0.5 overflow-hidden">
+                              {link.icon ? (
+                                link.icon.startsWith('/') || link.icon.startsWith('http') ? (
+                                  <img src={link.icon} alt="" className="w-4 h-4 object-contain" />
+                                ) : link.icon.trim().startsWith('<svg') ? (
+                                  <div
+                                    className="w-4 h-4 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:fill-current"
+                                    dangerouslySetInnerHTML={{ __html: link.icon }}
+                                  />
+                                ) : (
+                                  (() => {
+                                    const IconComp = getCustomOrNamedIcon(link.icon, link.label);
+                                    return <IconComp className="w-4 h-4" />;
+                                  })()
+                                )
+                              ) : (
+                                (() => {
+                                  const IconComp = getMenuItemIcon(link.label);
+                                  return <IconComp className="w-4 h-4" />;
+                                })()
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-1.5">
+                                <span className="text-sm font-bold text-white group-hover/link:text-[#D9F45F] transition-colors truncate">
+                                  {link.label}
+                                </span>
+                                {link.badge && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#D9F45F]/15 text-[#D9F45F] shrink-0">
+                                    {link.badge}
+                                  </span>
+                                )}
+                              </div>
+                              {link.description && (
+                                <p className="text-xs text-white/60 mt-0.5 line-clamp-2 leading-relaxed">
+                                  {link.description}
+                                </p>
+                              )}
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Featured Promo Box (Dynamically configured) */}
+                {hasFeaturedCard && (
+                  <div
+                    className={`${
+                      colCount >= 4 ? 'lg:col-span-3' : 'lg:col-span-4'
+                    } rounded-2xl bg-[#151414] border border-[#2A2B28] p-5 sm:p-6 flex flex-col justify-between`}
+                  >
+                    <div className="space-y-3">
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#663399]/30 border border-[#663399]/40 text-[#D9F45F] text-[10px] font-bold uppercase tracking-wider">
+                        <Sparkles className="w-3 h-3" />
+                        <span>Featured Innovation</span>
+                      </div>
+                      <h5 className="text-base font-bold text-white leading-snug">
+                        {featuredCard?.title || 'Featured Innovation'}
+                      </h5>
+                      <p className="text-xs text-white/60 leading-relaxed">
+                        {featuredCard?.description || 'Explore our latest enterprise capabilities and solutions.'}
+                      </p>
+                    </div>
+
+                    <Link
+                      href={featuredCard?.ctaUrl || activeMegaItem.url}
+                      className="inline-flex items-center gap-2 text-xs font-bold text-[#D9F45F] hover:underline pt-4 border-t border-[#2A2B28]"
+                    >
+                      <span>{featuredCard?.ctaLabel || 'Explore Capabilities'}</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Mobile Drawer */}
@@ -527,26 +658,42 @@ export function Header() {
                               <span className="text-[10px] font-bold uppercase tracking-wider text-[#D9F45F]/70 px-2">
                                 {col.heading}
                               </span>
-                              {col.links.map((link, lIdx) => {
-                                const IconComp = getMenuItemIcon(link.label);
-                                return (
-                                  <Link
-                                    key={lIdx}
-                                    href={link.url}
-                                    className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs text-white/80 hover:text-white hover:bg-white/[0.04] transition"
-                                  >
-                                    <div className="w-6 h-6 rounded bg-[#663399]/20 border border-[#663399]/30 flex items-center justify-center text-[#D9F45F] shrink-0">
-                                      <IconComp className="w-3.5 h-3.5" />
-                                    </div>
-                                    <span className="font-medium truncate">{link.label}</span>
-                                    {link.badge && (
-                                      <span className="ml-auto px-1.5 py-0.5 rounded text-[9px] bg-[#D9F45F]/15 text-[#D9F45F]">
-                                        {link.badge}
-                                      </span>
+                              {col.links.map((link, lIdx) => (
+                                <Link
+                                  key={lIdx}
+                                  href={link.url}
+                                  className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs text-white/80 hover:text-white hover:bg-white/[0.04] transition"
+                                >
+                                  <div className="w-6 h-6 rounded bg-[#663399]/20 border border-[#663399]/30 flex items-center justify-center text-[#D9F45F] shrink-0 overflow-hidden">
+                                    {link.icon ? (
+                                      link.icon.startsWith('/') || link.icon.startsWith('http') ? (
+                                        <img src={link.icon} alt="" className="w-3.5 h-3.5 object-contain" />
+                                      ) : link.icon.trim().startsWith('<svg') ? (
+                                        <div
+                                          className="w-3.5 h-3.5 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:fill-current"
+                                          dangerouslySetInnerHTML={{ __html: link.icon }}
+                                        />
+                                      ) : (
+                                        (() => {
+                                          const IconComp = getCustomOrNamedIcon(link.icon, link.label);
+                                          return <IconComp className="w-3.5 h-3.5" />;
+                                        })()
+                                      )
+                                    ) : (
+                                      (() => {
+                                        const IconComp = getMenuItemIcon(link.label);
+                                        return <IconComp className="w-3.5 h-3.5" />;
+                                      })()
                                     )}
-                                  </Link>
-                                );
-                              })}
+                                  </div>
+                                  <span className="font-medium truncate">{link.label}</span>
+                                  {link.badge && (
+                                    <span className="ml-auto px-1.5 py-0.5 rounded text-[9px] bg-[#D9F45F]/15 text-[#D9F45F]">
+                                      {link.badge}
+                                    </span>
+                                  )}
+                                </Link>
+                              ))}
                             </div>
                           ))}
                         </div>

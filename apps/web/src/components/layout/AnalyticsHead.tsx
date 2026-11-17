@@ -7,7 +7,27 @@ export function AnalyticsHead() {
   const [gaId, setGaId] = useState<string | null>(null);
   const [gtmId, setGtmId] = useState<string | null>(null);
   const [gVerification, setGVerification] = useState<string | null>(null);
-  const [faviconUrl, setFaviconUrl] = useState<string | null>(null);
+  const [faviconUrl, setFaviconUrl] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('silwasa_favicon_url') || null;
+    }
+    return null;
+  });
+
+  // Apply cached favicon immediately on mount to prevent any delay
+  useEffect(() => {
+    if (faviconUrl) {
+      const iconLinks = document.querySelectorAll("link[rel*='icon']");
+      if (iconLinks.length > 0) {
+        iconLinks.forEach((el) => el.setAttribute('href', faviconUrl));
+      } else {
+        const link = document.createElement('link');
+        link.rel = 'icon';
+        link.href = faviconUrl;
+        document.head.appendChild(link);
+      }
+    }
+  }, [faviconUrl]);
 
   useEffect(() => {
     async function loadPublicSettings() {
@@ -24,6 +44,9 @@ export function AnalyticsHead() {
 
           if (fav) {
             setFaviconUrl(fav);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('silwasa_favicon_url', fav);
+            }
             // Dynamically override any existing favicon link elements in document head
             const iconLinks = document.querySelectorAll("link[rel*='icon']");
             if (iconLinks.length > 0) {
@@ -33,6 +56,11 @@ export function AnalyticsHead() {
               link.rel = 'icon';
               link.href = fav;
               document.head.appendChild(link);
+            }
+          } else {
+            setFaviconUrl(null);
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('silwasa_favicon_url');
             }
           }
 

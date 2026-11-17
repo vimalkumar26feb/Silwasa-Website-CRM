@@ -84,6 +84,8 @@ export class MediaRepository {
     if (params.type) {
       if (params.type === 'image') {
         where.mimeType = { startsWith: 'image/' };
+      } else if (params.type === 'video') {
+        where.mimeType = { startsWith: 'video/' };
       } else if (params.type === 'document') {
         where.mimeType = { in: ['application/pdf', 'application/msword', 'text/plain'] };
       }
@@ -115,9 +117,21 @@ export class MediaRepository {
     });
   }
 
+  async findByIds(ids: string[]) {
+    return prisma.mediaItem.findMany({
+      where: { id: { in: ids } },
+    });
+  }
+
   async delete(id: string) {
     return prisma.mediaItem.delete({
       where: { id },
+    });
+  }
+
+  async deleteMany(ids: string[]) {
+    return prisma.mediaItem.deleteMany({
+      where: { id: { in: ids } },
     });
   }
 }

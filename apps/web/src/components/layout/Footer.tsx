@@ -6,7 +6,13 @@ import { Mail, Phone, MapPin, MessageCircle, ArrowUpRight, Github, Twitter, Link
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
-  const [brandLogo, setBrandLogo] = useState<string | null>(null);
+  const [brandLogo, setBrandLogo] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('silwasa_brand_logo') || null;
+    }
+    return null;
+  });
+  const [settingsLoaded, setSettingsLoaded] = useState<boolean>(false);
 
   useEffect(() => {
     async function loadLogo() {
@@ -15,12 +21,23 @@ export function Footer() {
         const res = await fetch(`${apiUrl}/settings/public`);
         if (res.ok) {
           const data = await res.json();
-          if (data.data?.general?.logoUrl) {
-            setBrandLogo(data.data.general.logoUrl);
+          const logoUrl = data.data?.general?.logoUrl;
+          if (logoUrl) {
+            setBrandLogo(logoUrl);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('silwasa_brand_logo', logoUrl);
+            }
+          } else {
+            setBrandLogo(null);
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('silwasa_brand_logo');
+            }
           }
         }
       } catch {
         // Fallback
+      } finally {
+        setSettingsLoaded(true);
       }
     }
     loadLogo();
@@ -32,13 +49,15 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 lg:gap-8">
           {/* Brand & Mission (4 cols) */}
           <div className="lg:col-span-4 space-y-5">
-            <Link href="/" className="flex items-center gap-2 group">
+            <Link href="/" className="flex items-center gap-2 group min-h-[40px] min-w-[140px]">
               {brandLogo ? (
                 <img
                   src={brandLogo}
                   alt="Silwasa IT Solutions"
                   className="h-10 w-auto max-w-[200px] object-contain rounded-lg"
                 />
+              ) : !settingsLoaded ? (
+                <div className="h-10 w-36 rounded-lg bg-white/[0.04] animate-pulse" />
               ) : (
                 <>
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#663399] to-[#8040bf] flex items-center justify-center text-white font-extrabold text-xl shadow-md shadow-[#663399]/20">

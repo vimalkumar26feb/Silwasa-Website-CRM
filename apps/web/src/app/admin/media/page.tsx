@@ -21,6 +21,10 @@ import {
   AlertCircle,
   ExternalLink,
   Info,
+  Film,
+  CheckSquare,
+  Square,
+  Sparkles,
 } from 'lucide-react';
 
 export default function AdminMediaPage() {
@@ -30,8 +34,11 @@ export default function AdminMediaPage() {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<string>('');
   const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isUploading, setIsUploading] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [bulkSuccessMessage, setBulkSuccessMessage] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -98,11 +105,61 @@ export default function AdminMediaPage() {
     setTimeout(() => setCopiedId(null), 2500);
   };
 
+  const handleToggleSelect = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.size === items.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(items.map((it) => it.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const count = selectedIds.size;
+    if (count === 0) return;
+    if (!confirm(`Permanently delete ${count} selected media asset${count === 1 ? '' : 's'}?`)) return;
+
+    try {
+      setIsBulkDeleting(true);
+      const res = await apiClient<{
+        success: boolean;
+        data: { deletedCount: number; skippedCount: number };
+        message: string;
+      }>('/admin/media/bulk-delete', {
+        method: 'POST',
+        body: { ids: Array.from(selectedIds) },
+      });
+      setSelectedIds(new Set());
+      setBulkSuccessMessage(res.message || `Deleted ${res.data.deletedCount} files.`);
+      setTimeout(() => setBulkSuccessMessage(null), 4000);
+      loadMedia();
+    } catch (err: unknown) {
+      const msg = err instanceof ApiError ? err.message : 'Bulk deletion failed';
+      alert(msg);
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Permanently delete "${name}"?`)) return;
 
     try {
       await apiClient(`/admin/media/${id}`, { method: 'DELETE' });
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
       setSelectedItem(null);
       loadMedia();
     } catch (err: unknown) {
@@ -148,7 +205,7 @@ export default function AdminMediaPage() {
             ref={fileInputRef}
             onChange={(e) => handleFileUpload(e.target.files)}
             multiple
-            accept="image/*,application/pdf"
+            accept="image/*,video/*,application/pdf"
             className="hidden"
           />
           <Button
@@ -170,6 +227,13 @@ export default function AdminMediaPage() {
         </div>
       )}
 
+      {bulkSuccessMessage && (
+        <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-800/40 flex items-center gap-3 text-xs text-emerald-300">
+          <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{bulkSuccessMessage}</span>
+        </div>
+      )}
+
       {/* Drag and drop upload banner */}
       <div
         onDragOver={(e) => e.preventDefault()}
@@ -184,16 +248,16 @@ export default function AdminMediaPage() {
           <UploadCloud className="w-6 h-6" />
         </div>
         <p className="text-sm font-semibold text-white">
-          Drag and drop images or documents here, or click to browse
+          Drag and drop images, videos or documents here, or click to browse
         </p>
         <p className="text-xs text-white/40 mt-1">
-          Supports WebP, PNG, JPG, SVG, GIF, PDF up to 10 MB
+          Supports WebP, PNG, JPG, SVG, GIF, MP4, WebM, MOV, PDF up to 100 MB
         </p>
       </div>
 
       {/* Filter and View Mode Controls */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
           <div className="relative w-full sm:w-64">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
             <input
@@ -219,12 +283,33 @@ export default function AdminMediaPage() {
               Images
             </button>
             <button
+              onClick={() => setFilterType('video')}
+              className={`px-3 py-1.5 rounded-md transition ${filterType === 'video' ? 'bg-[#663399] text-white' : 'text-white/60'}`}
+            >
+              Videos
+            </button>
+            <button
               onClick={() => setFilterType('document')}
               className={`px-3 py-1.5 rounded-md transition ${filterType === 'document' ? 'bg-[#663399] text-white' : 'text-white/60'}`}
             >
               Docs
             </button>
           </div>
+
+          {items.length > 0 && (
+            <button
+              type="button"
+              onClick={handleSelectAll}
+              className="px-2.5 py-1.5 rounded-lg border border-[#2A2B28] bg-[#1C1B1B] text-xs text-white/70 hover:text-white hover:border-[#663399] transition flex items-center gap-1.5"
+            >
+              {selectedIds.size === items.length ? (
+                <CheckSquare className="w-3.5 h-3.5 text-[#D9F45F]" />
+              ) : (
+                <Square className="w-3.5 h-3.5 text-white/40" />
+              )}
+              <span>{selectedIds.size === items.length ? 'Deselect All' : 'Select All'}</span>
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -261,8 +346,26 @@ export default function AdminMediaPage() {
               <div
                 key={item.id}
                 onClick={() => setSelectedItem(item)}
-                className="group relative rounded-xl border border-[#2A2B28] bg-[#1C1B1B] overflow-hidden cursor-pointer hover:border-[#663399] transition shadow-sm"
+                className={`group relative rounded-xl border bg-[#1C1B1B] overflow-hidden cursor-pointer transition shadow-sm ${
+                  selectedIds.has(item.id)
+                    ? 'border-[#D9F45F] ring-1 ring-[#D9F45F]/50'
+                    : 'border-[#2A2B28] hover:border-[#663399]'
+                }`}
               >
+                {/* Selection Checkbox */}
+                <button
+                  type="button"
+                  onClick={(e) => handleToggleSelect(item.id, e)}
+                  className={`absolute top-2 left-2 z-10 w-5 h-5 rounded border flex items-center justify-center transition ${
+                    selectedIds.has(item.id)
+                      ? 'bg-[#663399] border-[#D9F45F] text-[#D9F45F]'
+                      : 'bg-black/60 border-white/30 hover:border-white text-transparent group-hover:text-white/20'
+                  }`}
+                  title="Select for bulk action"
+                >
+                  <Check className="w-3.5 h-3.5 stroke-[3]" />
+                </button>
+
                 <div className="aspect-square bg-black/40 flex items-center justify-center overflow-hidden p-2">
                   {item.mimeType.startsWith('image/') ? (
                     <img
@@ -270,6 +373,13 @@ export default function AdminMediaPage() {
                       alt={item.altText || item.originalName}
                       className="w-full h-full object-contain group-hover:scale-105 transition duration-300"
                     />
+                  ) : item.mimeType.startsWith('video/') ? (
+                    <div className="relative w-full h-full flex flex-col items-center justify-center bg-black/60 text-[#D9F45F]">
+                      <Film className="w-10 h-10 mb-1 opacity-90 group-hover:scale-110 transition duration-300" />
+                      <span className="text-[9px] uppercase font-mono font-bold px-1.5 py-0.5 rounded bg-[#663399]/40 border border-[#663399]/60 text-white">
+                        VIDEO
+                      </span>
+                    </div>
                   ) : (
                     <FileText className="w-12 h-12 text-white/30" />
                   )}
@@ -290,28 +400,47 @@ export default function AdminMediaPage() {
                 {items.map((item) => (
                   <div
                     key={item.id}
-                    className="p-3 flex items-center justify-between hover:bg-white/[0.02] transition"
+                    className={`p-3 flex items-center justify-between transition ${
+                      selectedIds.has(item.id) ? 'bg-[#663399]/10' : 'hover:bg-white/[0.02]'
+                    }`}
                   >
-                    <div
-                      onClick={() => setSelectedItem(item)}
-                      className="flex items-center gap-3 cursor-pointer flex-1 min-w-0"
-                    >
-                      <div className="w-12 h-12 rounded-lg bg-black/40 border border-[#2A2B28] overflow-hidden shrink-0 flex items-center justify-center p-1">
-                        {item.mimeType.startsWith('image/') ? (
-                          <img
-                            src={item.url}
-                            alt={item.originalName}
-                            className="w-full h-full object-contain"
-                          />
-                        ) : (
-                          <FileText className="w-5 h-5 text-white/40" />
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold text-white truncate">{item.originalName}</p>
-                        <p className="text-[10px] text-white/40">
-                          {formatFileSize(item.sizeBytes)} • {item.mimeType}
-                        </p>
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <button
+                        type="button"
+                        onClick={(e) => handleToggleSelect(item.id, e)}
+                        className={`w-5 h-5 rounded border flex items-center justify-center transition shrink-0 ${
+                          selectedIds.has(item.id)
+                            ? 'bg-[#663399] border-[#D9F45F] text-[#D9F45F]'
+                            : 'bg-black/40 border-white/30 hover:border-white text-transparent'
+                        }`}
+                        title="Select for bulk action"
+                      >
+                        <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      </button>
+
+                      <div
+                        onClick={() => setSelectedItem(item)}
+                        className="flex items-center gap-3 cursor-pointer flex-1 min-w-0"
+                      >
+                        <div className="w-12 h-12 rounded-lg bg-black/40 border border-[#2A2B28] overflow-hidden shrink-0 flex items-center justify-center p-1">
+                          {item.mimeType.startsWith('image/') ? (
+                            <img
+                              src={item.url}
+                              alt={item.originalName}
+                              className="w-full h-full object-contain"
+                            />
+                          ) : item.mimeType.startsWith('video/') ? (
+                            <Film className="w-6 h-6 text-[#D9F45F]" />
+                          ) : (
+                            <FileText className="w-5 h-5 text-white/40" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-white truncate">{item.originalName}</p>
+                          <p className="text-[10px] text-white/40">
+                            {formatFileSize(item.sizeBytes)} • {item.mimeType}
+                          </p>
+                        </div>
                       </div>
                     </div>
 
@@ -349,6 +478,40 @@ export default function AdminMediaPage() {
         </div>
       )}
 
+      {/* Floating Sticky Bulk Actions Bar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-[#1C1B1B]/95 backdrop-blur-md border border-[#663399]/60 px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-4 animate-in fade-in slide-in-from-bottom-3 duration-200">
+          <div className="flex items-center gap-2 text-xs text-white">
+            <span className="w-6 h-6 rounded-full bg-[#663399] flex items-center justify-center font-bold text-[#D9F45F]">
+              {selectedIds.size}
+            </span>
+            <span>asset{selectedIds.size === 1 ? '' : 's'} selected</span>
+          </div>
+
+          <div className="h-4 w-px bg-white/20" />
+
+          <Button
+            onClick={handleSelectAll}
+            variant="ghost"
+            size="sm"
+            className="h-8 text-xs text-white/70 hover:text-white"
+          >
+            {selectedIds.size === items.length ? 'Deselect All' : 'Select All'}
+          </Button>
+
+          <Button
+            onClick={handleBulkDelete}
+            variant="primary"
+            size="sm"
+            disabled={isBulkDeleting}
+            className="h-8 text-xs bg-red-600 hover:bg-red-700 text-white border-0 shadow-lg shadow-red-900/30"
+          >
+            <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+            {isBulkDeleting ? 'Deleting...' : `Delete Selected (${selectedIds.size})`}
+          </Button>
+        </div>
+      )}
+
       {/* Asset Detail & Edit Modal */}
       {selectedItem && (
         <Modal
@@ -364,6 +527,12 @@ export default function AdminMediaPage() {
                   src={selectedItem.url}
                   alt={selectedItem.altText || selectedItem.originalName}
                   className="max-h-full max-w-full object-contain"
+                />
+              ) : selectedItem.mimeType.startsWith('video/') ? (
+                <video
+                  src={selectedItem.url}
+                  controls
+                  className="max-h-full max-w-full rounded-lg"
                 />
               ) : (
                 <FileText className="w-16 h-16 text-white/40" />

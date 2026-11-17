@@ -712,6 +712,30 @@ export default function AdminNavigationPage() {
                     {/* Mega Menu Columns Config */}
                     {selectedItem.isMegaMenu && (
                       <div className="pt-4 border-t border-[#2A2B28] space-y-4">
+                        {/* Dynamic Column Count Selector (2, 3, 4, 5) */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl bg-[#1C1B1B] border border-[#2A2B28]">
+                          <div>
+                            <span className="text-xs font-bold text-white block">Desktop Grid Columns</span>
+                            <span className="text-[10px] text-white/50">Number of columns in a single row on desktop viewports</span>
+                          </div>
+                          <div className="flex items-center gap-1 bg-[#151414] p-1 rounded-lg border border-[#2A2B28]">
+                            {[2, 3, 4, 5].map((cols) => (
+                              <button
+                                key={cols}
+                                type="button"
+                                onClick={() => handleUpdateActiveItem('megaMenuColumnCount', cols)}
+                                className={`px-2.5 py-1 rounded text-xs font-bold transition ${
+                                  (selectedItem.megaMenuColumnCount || Math.min(5, Math.max(2, selectedItem.megaMenuColumns?.length || 2))) === cols
+                                    ? 'bg-[#663399] text-[#D9F45F] shadow-sm'
+                                    : 'text-white/60 hover:text-white'
+                                }`}
+                              >
+                                {cols} Cols
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-bold text-white/80">
                             Mega Menu Columns ({selectedItem.megaMenuColumns?.length || 0})
@@ -755,7 +779,7 @@ export default function AdminNavigationPage() {
                             </div>
 
                             {/* Column Links */}
-                            <div className="space-y-2 pt-2 border-t border-[#2A2B28]/60">
+                            <div className="space-y-2.5 pt-2 border-t border-[#2A2B28]/60">
                               <div className="flex items-center justify-between text-[11px] text-white/50">
                                 <span>Child Links ({col.links.length})</span>
                                 <button
@@ -769,71 +793,165 @@ export default function AdminNavigationPage() {
                               {col.links.map((link, lIdx) => (
                                 <div
                                   key={lIdx}
-                                  className="grid grid-cols-12 gap-2 items-center p-2 rounded-lg bg-[#151414] border border-[#2A2B28]"
+                                  className="p-2.5 rounded-xl bg-[#151414] border border-[#2A2B28] space-y-2"
                                 >
-                                  <div className="col-span-5">
-                                    <input
-                                      type="text"
-                                      value={link.label}
-                                      onChange={(e) => {
-                                        const cols = [...(selectedItem.megaMenuColumns || [])];
-                                        cols[colIdx].links[lIdx].label = e.target.value;
-                                        handleUpdateActiveItem('megaMenuColumns', cols);
-                                      }}
-                                      placeholder="Title"
-                                      className="w-full px-2 py-1 rounded bg-transparent text-xs text-white border-0 focus:outline-none"
-                                    />
+                                  <div className="grid grid-cols-12 gap-2 items-center">
+                                    <div className="col-span-5">
+                                      <input
+                                        type="text"
+                                        value={link.label}
+                                        onChange={(e) => {
+                                          const cols = [...(selectedItem.megaMenuColumns || [])];
+                                          cols[colIdx].links[lIdx].label = e.target.value;
+                                          handleUpdateActiveItem('megaMenuColumns', cols);
+                                        }}
+                                        placeholder="Link Title"
+                                        className="w-full px-2 py-1 rounded bg-[#1C1B1B] border border-[#2A2B28] text-xs text-white focus:outline-none focus:border-[#D9F45F]"
+                                      />
+                                    </div>
+                                    <div className="col-span-6">
+                                      <input
+                                        type="text"
+                                        value={link.url}
+                                        onChange={(e) => {
+                                          const cols = [...(selectedItem.megaMenuColumns || [])];
+                                          cols[colIdx].links[lIdx].url = e.target.value;
+                                          handleUpdateActiveItem('megaMenuColumns', cols);
+                                        }}
+                                        placeholder="/services/url"
+                                        className="w-full px-2 py-1 rounded bg-[#1C1B1B] border border-[#2A2B28] text-xs text-white/80 font-mono focus:outline-none focus:border-[#D9F45F]"
+                                      />
+                                    </div>
+                                    <div className="col-span-1 text-right">
+                                      <button
+                                        onClick={() => handleRemoveMegaLink(colIdx, lIdx)}
+                                        className="text-white/40 hover:text-red-400 p-1"
+                                        title="Remove link"
+                                      >
+                                        ×
+                                      </button>
+                                    </div>
                                   </div>
-                                  <div className="col-span-6">
-                                    <input
-                                      type="text"
-                                      value={link.url}
-                                      onChange={(e) => {
-                                        const cols = [...(selectedItem.megaMenuColumns || [])];
-                                        cols[colIdx].links[lIdx].url = e.target.value;
-                                        handleUpdateActiveItem('megaMenuColumns', cols);
-                                      }}
-                                      placeholder="/url"
-                                      className="w-full px-2 py-1 rounded bg-transparent text-xs text-white/60 font-mono border-0 focus:outline-none"
-                                    />
+
+                                  {/* Icon / SVG / Image URL & Description Configuration */}
+                                  <div className="grid grid-cols-12 gap-2 items-center pt-1 border-t border-[#2A2B28]/40">
+                                    <div className="col-span-6">
+                                      <div className="flex items-center gap-1.5">
+                                        <input
+                                          type="text"
+                                          value={link.icon || ''}
+                                          onChange={(e) => {
+                                            const cols = [...(selectedItem.megaMenuColumns || [])];
+                                            cols[colIdx].links[lIdx].icon = e.target.value;
+                                            handleUpdateActiveItem('megaMenuColumns', cols);
+                                          }}
+                                          placeholder="Icon: code, cpu, cloud, /img.svg, <svg>"
+                                          className="w-full px-2 py-1 rounded bg-[#1C1B1B] border border-[#2A2B28] text-[11px] text-[#D9F45F] font-mono focus:outline-none"
+                                        />
+                                      </div>
+                                    </div>
+                                    <div className="col-span-6">
+                                      <input
+                                        type="text"
+                                        value={link.description || ''}
+                                        onChange={(e) => {
+                                          const cols = [...(selectedItem.megaMenuColumns || [])];
+                                          cols[colIdx].links[lIdx].description = e.target.value;
+                                          handleUpdateActiveItem('megaMenuColumns', cols);
+                                        }}
+                                        placeholder="Brief description (optional)"
+                                        className="w-full px-2 py-1 rounded bg-[#1C1B1B] border border-[#2A2B28] text-[11px] text-white/60 focus:outline-none"
+                                      />
+                                    </div>
                                   </div>
-                                  <div className="col-span-1 text-right">
-                                    <button
-                                      onClick={() => handleRemoveMegaLink(colIdx, lIdx)}
-                                      className="text-white/40 hover:text-red-400 p-1"
-                                    >
-                                      ×
-                                    </button>
+
+                                  {/* Quick Icon Selector Chips */}
+                                  <div className="flex flex-wrap items-center gap-1 pt-0.5">
+                                    <span className="text-[9px] text-white/40 uppercase font-mono mr-1">Presets:</span>
+                                    {['code', 'cpu', 'cloud', 'globe', 'smartphone', 'shield', 'zap', 'database', 'sparkles', 'cart'].map((preset) => (
+                                      <button
+                                        key={preset}
+                                        type="button"
+                                        onClick={() => {
+                                          const cols = [...(selectedItem.megaMenuColumns || [])];
+                                          cols[colIdx].links[lIdx].icon = preset;
+                                          handleUpdateActiveItem('megaMenuColumns', cols);
+                                        }}
+                                        className={`px-1.5 py-0.5 rounded text-[9px] font-mono transition ${
+                                          link.icon === preset
+                                            ? 'bg-[#D9F45F]/20 text-[#D9F45F] border border-[#D9F45F]/40'
+                                            : 'bg-[#1C1B1B] text-white/50 hover:text-white border border-[#2A2B28]'
+                                        }`}
+                                      >
+                                        {preset}
+                                      </button>
+                                    ))}
                                   </div>
                                 </div>
                               ))}
                             </div>
 
                             {/* Featured Promo Card Configuration */}
-                            <div className="pt-2 border-t border-[#2A2B28]/60 space-y-2">
-                              <span className="text-[11px] font-bold uppercase tracking-wider text-white/40 block">
-                                Featured Promo Box (Optional)
+                            <div className="pt-2.5 border-t border-[#2A2B28]/60 space-y-2">
+                              <span className="text-[11px] font-bold uppercase tracking-wider text-[#D9F45F]/80 block">
+                                Featured Promo Box (Configurable)
                               </span>
-                              <div className="grid grid-cols-2 gap-2">
-                                <input
-                                  type="text"
-                                  placeholder="Promo Title"
-                                  value={col.featuredItem?.title || ''}
+                              <div className="space-y-2">
+                                <div className="grid grid-cols-2 gap-2">
+                                  <input
+                                    type="text"
+                                    placeholder="Promo Title (e.g. AI & GEO Innovation)"
+                                    value={col.featuredItem?.title || ''}
+                                    onChange={(e) => {
+                                      const cols = [...(selectedItem.megaMenuColumns || [])];
+                                      cols[colIdx].featuredItem = {
+                                        title: e.target.value,
+                                        description: col.featuredItem?.description || '',
+                                        ctaLabel: col.featuredItem?.ctaLabel || 'Learn More',
+                                        ctaUrl: col.featuredItem?.ctaUrl || '/contact',
+                                      };
+                                      handleUpdateActiveItem('megaMenuColumns', cols);
+                                    }}
+                                    className="px-2 py-1.5 rounded-lg bg-[#151414] border border-[#2A2B28] text-xs text-white"
+                                  />
+                                  <input
+                                    type="text"
+                                    placeholder="CTA Label (e.g. Explore Capabilities)"
+                                    value={col.featuredItem?.ctaLabel || ''}
+                                    onChange={(e) => {
+                                      const cols = [...(selectedItem.megaMenuColumns || [])];
+                                      cols[colIdx].featuredItem = {
+                                        title: col.featuredItem?.title || '',
+                                        description: col.featuredItem?.description || '',
+                                        ctaLabel: e.target.value,
+                                        ctaUrl: col.featuredItem?.ctaUrl || '/contact',
+                                      };
+                                      handleUpdateActiveItem('megaMenuColumns', cols);
+                                    }}
+                                    className="px-2 py-1.5 rounded-lg bg-[#151414] border border-[#2A2B28] text-xs text-white"
+                                  />
+                                </div>
+
+                                <textarea
+                                  rows={2}
+                                  placeholder="Promo Description (Custom description text for this mega menu promo card)"
+                                  value={col.featuredItem?.description || ''}
                                   onChange={(e) => {
                                     const cols = [...(selectedItem.megaMenuColumns || [])];
                                     cols[colIdx].featuredItem = {
-                                      title: e.target.value,
-                                      description: col.featuredItem?.description || '',
+                                      title: col.featuredItem?.title || '',
+                                      description: e.target.value,
                                       ctaLabel: col.featuredItem?.ctaLabel || 'Learn More',
                                       ctaUrl: col.featuredItem?.ctaUrl || '/contact',
                                     };
                                     handleUpdateActiveItem('megaMenuColumns', cols);
                                   }}
-                                  className="px-2 py-1.5 rounded-lg bg-[#151414] border border-[#2A2B28] text-xs text-white"
+                                  className="w-full px-2 py-1.5 rounded-lg bg-[#151414] border border-[#2A2B28] text-xs text-white focus:outline-none focus:border-[#D9F45F]"
                                 />
+
                                 <input
                                   type="text"
-                                  placeholder="CTA URL"
+                                  placeholder="CTA URL (e.g. /services/ai-solutions-geo)"
                                   value={col.featuredItem?.ctaUrl || ''}
                                   onChange={(e) => {
                                     const cols = [...(selectedItem.megaMenuColumns || [])];
@@ -842,7 +960,7 @@ export default function AdminNavigationPage() {
                                       handleUpdateActiveItem('megaMenuColumns', cols);
                                     }
                                   }}
-                                  className="px-2 py-1.5 rounded-lg bg-[#151414] border border-[#2A2B28] text-xs text-white font-mono"
+                                  className="w-full px-2 py-1.5 rounded-lg bg-[#151414] border border-[#2A2B28] text-xs text-white font-mono"
                                 />
                               </div>
                             </div>

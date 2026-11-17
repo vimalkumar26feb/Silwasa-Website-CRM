@@ -98,6 +98,7 @@ export interface MenuItem {
   badge?: string;
   description?: string;
   isMegaMenu?: boolean;
+  megaMenuColumnCount?: number;
   megaMenuColumns?: MegaMenuColumn[];
   children?: MenuItem[];
   isEnabled: boolean;

@@ -265,6 +265,7 @@ export const MenuItemSchema: z.ZodType<any> = z.lazy(() =>
     badge: z.string().optional(),
     description: z.string().optional(),
     isMegaMenu: z.boolean().default(false),
+    megaMenuColumnCount: z.number().int().min(1).max(6).optional(),
     megaMenuColumns: z.array(MegaMenuColumnSchema).optional(),
     children: z.array(MenuItemSchema).optional(),
     isEnabled: z.boolean().default(true),
