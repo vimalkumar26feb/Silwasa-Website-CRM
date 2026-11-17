@@ -49,6 +49,8 @@ export const SEOMetadataSchema = z.object({
 export const SectionTypeEnum = z.enum([
   'hero',
   'hero-carousel',
+  'image-carousel',
+  'video-carousel',
   'clients-partners',
   'about-intro',
   'services-grid',

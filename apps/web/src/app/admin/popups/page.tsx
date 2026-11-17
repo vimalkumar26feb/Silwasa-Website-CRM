@@ -708,31 +708,35 @@ export default function AdminPopupsPage() {
           </div>
 
           {/* Modal Mockup Container */}
-          <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-[#1C1B1B] via-[#241a2e] to-[#1C1B1B] border border-[#663399]/60 shadow-2xl relative space-y-4 overflow-hidden">
-            <div className="flex items-center justify-between">
-              {selectedPopup.imageUrl ? (
-                <div className="w-full relative aspect-[16/7] rounded-2xl overflow-hidden border border-[#2A2B28] bg-[#151414] mb-1">
-                  <img src={selectedPopup.imageUrl} alt="Banner Preview" className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#1C1B1B] via-transparent to-transparent" />
-                  <div className="absolute bottom-2.5 left-2.5 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#151414]/90 backdrop-blur-md text-[#D9F45F] border border-[#2A2B28]">
-                    <Sparkles className="w-3 h-3" />
-                    <span>{selectedPopup.badge || 'PROMOTION'}</span>
-                  </div>
+          <div className="rounded-3xl bg-gradient-to-br from-[#1C1B1B] via-[#241a2e] to-[#1C1B1B] border border-[#663399]/60 shadow-2xl relative overflow-hidden">
+            {/* Close Button: anchored top-right with high z-index and backdrop blur */}
+            <span className="absolute top-3.5 right-3.5 z-50 w-7 h-7 rounded-full bg-black/80 hover:bg-black backdrop-blur-md border border-white/25 flex items-center justify-center text-white/90 text-xs shadow-xl cursor-default">
+              ✕
+            </span>
+
+            {/* Custom Image Banner or Badge */}
+            {selectedPopup.imageUrl ? (
+              <div className="w-full relative aspect-[16/7] overflow-hidden border-b border-[#2A2B28] bg-[#151414]">
+                <img src={selectedPopup.imageUrl} alt="Banner Preview" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#1C1B1B] via-transparent to-transparent" />
+                <div className="absolute bottom-3 left-4 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#151414]/90 backdrop-blur-md text-[#D9F45F] border border-[#2A2B28]">
+                  <Sparkles className="w-3 h-3" />
+                  <span>{selectedPopup.badge || 'PROMOTION'}</span>
                 </div>
-              ) : (
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#D9F45F]/15 text-[#D9F45F] border border-[#D9F45F]/30 flex items-center gap-1">
+              </div>
+            ) : (
+              <div className="px-6 sm:px-8 pt-6 sm:pt-8">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#D9F45F]/15 text-[#D9F45F] border border-[#D9F45F]/30 inline-flex items-center gap-1">
                   <Sparkles className="w-3 h-3" />
                   {selectedPopup.badge || 'PROMOTION'}
                 </span>
-              )}
-              <span className="w-6 h-6 rounded-full bg-[#151414] border border-[#2A2B28] flex items-center justify-center text-white/40 text-xs shrink-0 ml-2">
-                ✕
-              </span>
-            </div>
+              </div>
+            )}
 
-            <h3 className="text-xl sm:text-2xl font-extrabold text-white leading-tight">
-              {selectedPopup.title || 'Enter High-Impact Headline'}
-            </h3>
+            <div className="p-6 sm:p-8 pt-4 space-y-4">
+              <h3 className="text-xl sm:text-2xl font-extrabold text-white leading-tight pr-8">
+                {selectedPopup.title || 'Enter High-Impact Headline'}
+              </h3>
 
             <p className="text-xs text-white/70 leading-relaxed">
               {selectedPopup.description || 'Describe the value proposition or discount for your visitor.'}
@@ -769,6 +773,7 @@ export default function AdminPopupsPage() {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }

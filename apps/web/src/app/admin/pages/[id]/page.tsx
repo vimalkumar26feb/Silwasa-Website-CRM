@@ -404,12 +404,10 @@ export default function PageBuilderPage({ params }: { params: Promise<{ id: stri
       setSuccessMessage('Page layout & configuration saved successfully');
       setTimeout(() => setSuccessMessage(null), 3500);
     } catch (err: unknown) {
-      // In offline / fallback
-      if (publishStatus !== undefined) {
-        setPage({ ...page, isPublished: publishStatus });
-      }
-      setSuccessMessage('Page changes saved in workspace');
-      setTimeout(() => setSuccessMessage(null), 3500);
+      console.error('Failed to save page:', err);
+      const msg = err instanceof Error ? err.message : 'Failed to save page configuration';
+      setErrorMessage(msg);
+      setTimeout(() => setErrorMessage(null), 5000);
     } finally {
       setSaving(false);
     }

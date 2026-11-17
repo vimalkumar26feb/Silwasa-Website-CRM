@@ -174,18 +174,25 @@ export default function BlogEditorPage({ params }: { params: Promise<{ id: strin
   useEffect(() => {
     async function loadCategories() {
       try {
-        const res = await apiClient<{ success: boolean; data: BlogCategoryOption[] }>('/blogs/categories');
-        if (res.success && res.data) {
+        const res = await apiClient<{ success: boolean; data: BlogCategoryOption[] }>('/admin/blogs/categories');
+        if (res.success && res.data && res.data.length > 0) {
           setAvailableCategories(res.data);
+          return;
+        }
+
+        const pubRes = await apiClient<{ success: boolean; data: BlogCategoryOption[] }>('/blogs/categories');
+        if (pubRes.success && pubRes.data && pubRes.data.length > 0) {
+          setAvailableCategories(pubRes.data);
+          return;
         }
       } catch {
         // Fallback demo categories if offline
         setAvailableCategories([
-          { id: 'cat-1', name: 'Web Development', slug: 'web-development' },
-          { id: 'cat-2', name: 'Artificial Intelligence & GEO', slug: 'ai-solutions-geo' },
-          { id: 'cat-3', name: 'Software Architecture', slug: 'software-architecture' },
-          { id: 'cat-4', name: 'Mobile Engineering', slug: 'mobile-app-development' },
-          { id: 'cat-5', name: 'Technical SEO', slug: 'seo-services' },
+          { id: 'cat-1', name: 'Web Development', slug: 'web-development', _count: { posts: 7 } },
+          { id: 'cat-2', name: 'Artificial Intelligence & GEO', slug: 'ai-solutions-geo', _count: { posts: 4 } },
+          { id: 'cat-3', name: 'Software Architecture', slug: 'software-architecture', _count: { posts: 5 } },
+          { id: 'cat-4', name: 'Mobile Engineering', slug: 'mobile-app-development', _count: { posts: 3 } },
+          { id: 'cat-5', name: 'Technical SEO', slug: 'seo-services', _count: { posts: 2 } },
         ]);
       }
     }
@@ -1012,9 +1019,18 @@ export default function BlogEditorPage({ params }: { params: Promise<{ id: strin
                     <Layers className="w-4 h-4 text-[#D9F45F]" />
                     Blog Categories
                   </span>
-                  <span className="text-[11px] font-mono text-white/50">
-                    {selectedCategoryIds.length} selected
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href="/admin/categories"
+                      target="_blank"
+                      className="text-[11px] text-[#D9F45F] hover:underline"
+                    >
+                      Manage
+                    </Link>
+                    <span className="text-[11px] font-mono text-white/50">
+                      ({selectedCategoryIds.length} selected)
+                    </span>
+                  </div>
                 </CardTitle>
                 <CardDescription className="text-xs text-white/50">
                   Select topics to classify this article on the website

@@ -277,6 +277,7 @@ export default function AdminCategoriesPage() {
                   <TableHead>Category Name</TableHead>
                   <TableHead>Slug</TableHead>
                   <TableHead>Description</TableHead>
+                  <TableHead className="text-center">Articles Count</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -294,6 +295,11 @@ export default function AdminCategoriesPage() {
                     </TableCell>
                     <TableCell className="text-xs text-white/70 max-w-md truncate">
                       {cat.description || '—'}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#663399]/20 text-[#D9F45F] border border-[#663399]/40 font-mono">
+                        {cat._count?.posts ?? 0} {cat._count?.posts === 1 ? 'post' : 'posts'}
+                      </span>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
