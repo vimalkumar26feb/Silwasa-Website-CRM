@@ -233,6 +233,22 @@ export const GeneralSettingsSchema = z.object({
   })).default([])
 });
 
+export const EmailSettingsSchema = z.object({
+  provider: z.enum(['mock', 'brevo', 'sendgrid', 'gmail', 'smtp']).default('mock'),
+  fromEmail: z.string().email('Please enter a valid sender email address'),
+  fromName: z.string().min(1, 'Sender display name is required'),
+  adminNotificationEmail: z.string().email('Please enter a valid admin notification email address'),
+  brevoApiKey: z.string().optional().nullable(),
+  sendgridApiKey: z.string().optional().nullable(),
+  gmailUser: z.string().optional().nullable(),
+  gmailAppPassword: z.string().optional().nullable(),
+});
+
+export const SendTestEmailSchema = z.object({
+  to: z.string().email('Please enter a valid recipient email address'),
+  settings: EmailSettingsSchema.partial().optional(),
+});
+
 
 export const MegaMenuLinkSchema = z.object({
   label: z.string().min(1, 'Link label is required'),

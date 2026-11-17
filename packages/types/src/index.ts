@@ -344,6 +344,19 @@ export interface GeneralSettings {
   }[];
 }
 
+export type EmailProviderType = 'mock' | 'brevo' | 'sendgrid' | 'gmail' | 'smtp';
+
+export interface EmailSettings {
+  provider: EmailProviderType;
+  fromEmail: string;
+  fromName: string;
+  adminNotificationEmail: string;
+  brevoApiKey?: string;
+  sendgridApiKey?: string;
+  gmailUser?: string;
+  gmailAppPassword?: string;
+}
+
 export interface ActivityLog {
   id: string;
   userId: string;

@@ -104,6 +104,43 @@ export class SettingsController {
     }
   }
 
+  async sendTestEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { to, settings } = req.body;
+      if (!to || typeof to !== 'string' || !to.includes('@')) {
+        res.status(400).json({
+          success: false,
+          message: 'Please provide a valid recipient email address',
+        });
+        return;
+      }
+
+      const result = await settingsService.sendTestEmail(
+        to.trim(),
+        settings,
+        req.user?.id,
+        req.user?.name
+      );
+
+      if (!result.success) {
+        res.status(400).json({
+          success: false,
+          message: result.error || 'Failed to dispatch test email',
+          data: result,
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        message: `Test email dispatched to ${to} via ${result.provider?.toUpperCase()} provider!`,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getSeoSettings(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const settings = await settingsService.getSeoSettings();

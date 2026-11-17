@@ -15,7 +15,10 @@ import {
   Server,
   Key,
   ExternalLink,
-  Globe
+  Globe,
+  Eye,
+  EyeOff,
+  RefreshCw
 } from 'lucide-react';
 
 interface EmailSettingsData {
@@ -44,6 +47,7 @@ export default function AdminEmailSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [testEmailAddress, setTestEmailAddress] = useState('contact@silwasa.com');
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -55,17 +59,24 @@ export default function AdminEmailSettingsPage() {
     setLoading(true);
     try {
       const res = await apiClient.get<any>('/admin/settings/email');
-      if (res) {
+      // Resilient extraction for { success: true, data: { ... } } or direct payload
+      const data = res && typeof res === 'object' && 'data' in res && res.data ? res.data : res;
+      if (data) {
         setSettings({
-          provider: res.provider || 'mock',
-          fromEmail: res.fromEmail || 'contact@silwasa.com',
-          fromName: res.fromName || 'Silwasa IT Solutions',
-          adminNotificationEmail: res.adminNotificationEmail || 'contact@silwasa.com',
-          brevoApiKey: res.brevoApiKey || '',
-          sendgridApiKey: res.sendgridApiKey || '',
-          gmailUser: res.gmailUser || '',
-          gmailAppPassword: res.gmailAppPassword || ''
+          provider: data.provider || 'mock',
+          fromEmail: data.fromEmail || 'contact@silwasa.com',
+          fromName: data.fromName || 'Silwasa IT Solutions',
+          adminNotificationEmail: data.adminNotificationEmail || 'contact@silwasa.com',
+          brevoApiKey: data.brevoApiKey || '',
+          sendgridApiKey: data.sendgridApiKey || '',
+          gmailUser: data.gmailUser || '',
+          gmailAppPassword: data.gmailAppPassword || ''
         });
+        if (data.adminNotificationEmail) {
+          setTestEmailAddress(data.adminNotificationEmail);
+        } else if (data.gmailUser) {
+          setTestEmailAddress(data.gmailUser);
+        }
       }
     } catch {
       // Fallback
@@ -80,10 +91,28 @@ export default function AdminEmailSettingsPage() {
     setNotification(null);
 
     try {
-      await apiClient.put('/admin/settings/email', settings);
+      const payload: EmailSettingsData = {
+        provider: settings.provider,
+        fromEmail: (settings.fromEmail || 'contact@silwasa.com').trim(),
+        fromName: (settings.fromName || 'Silwasa IT Solutions').trim(),
+        adminNotificationEmail: (settings.adminNotificationEmail || 'contact@silwasa.com').trim(),
+        brevoApiKey: (settings.brevoApiKey || '').trim(),
+        sendgridApiKey: (settings.sendgridApiKey || '').trim(),
+        gmailUser: (settings.gmailUser || '').trim(),
+        gmailAppPassword: (settings.gmailAppPassword || '').trim()
+      };
+
+      const res = await apiClient.put<any>('/admin/settings/email', payload);
+      const data = res && typeof res === 'object' && 'data' in res && res.data ? res.data : payload;
+
+      setSettings((prev) => ({
+        ...prev,
+        ...data
+      }));
+
       setNotification({
         type: 'success',
-        message: 'Email provider settings and credentials updated successfully.'
+        message: `Email settings & ${settings.provider.toUpperCase()} credentials saved successfully! Your configuration will persist on reload.`
       });
     } catch (err: any) {
       setNotification({
@@ -101,21 +130,49 @@ export default function AdminEmailSettingsPage() {
     setNotification(null);
 
     try {
-      // Mock test dispatch
-      await new Promise((r) => setTimeout(r, 800));
+      const testPayload = {
+        to: testEmailAddress.trim(),
+        settings: {
+          provider: settings.provider,
+          fromEmail: (settings.fromEmail || 'contact@silwasa.com').trim(),
+          fromName: (settings.fromName || 'Silwasa IT Solutions').trim(),
+          adminNotificationEmail: (settings.adminNotificationEmail || 'contact@silwasa.com').trim(),
+          brevoApiKey: (settings.brevoApiKey || '').trim(),
+          sendgridApiKey: (settings.sendgridApiKey || '').trim(),
+          gmailUser: (settings.gmailUser || '').trim(),
+          gmailAppPassword: (settings.gmailAppPassword || '').trim()
+        }
+      };
+
+      const res = await apiClient.post<any>('/admin/settings/email/test', testPayload);
+      const message =
+        res?.message ||
+        `Test email dispatched to ${testEmailAddress} via ${settings.provider.toUpperCase()}! Please check your inbox and spam folder.`;
+
       setNotification({
         type: 'success',
-        message: `Test email dispatched to ${testEmailAddress} via ${settings.provider.toUpperCase()} provider.`
+        message
       });
     } catch (err: any) {
       setNotification({
         type: 'error',
-        message: err.message || 'Failed to dispatch test email'
+        message:
+          err.message ||
+          `Failed to dispatch test email via ${settings.provider.toUpperCase()}. Please verify your credentials and network connection.`
       });
     } finally {
       setTesting(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[350px] space-y-3">
+        <RefreshCw className="w-8 h-8 text-[#D9F45F] animate-spin" />
+        <p className="text-zinc-400 text-sm">Loading email provider configuration...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -126,7 +183,7 @@ export default function AdminEmailSettingsPage() {
           Email & SMTP Configuration
         </h1>
         <p className="text-sm text-zinc-400 mt-1">
-          Configure outgoing transactional email providers (Brevo, SendGrid, Google Workspace) for lead notifications and client auto-responders.
+          Configure outgoing transactional email providers (Google Workspace / Gmail, Brevo, SendGrid) for client enquiry auto-replies and instant admin lead alerts.
         </p>
       </div>
 
@@ -172,10 +229,15 @@ export default function AdminEmailSettingsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
               {[
                 {
+                  id: 'gmail',
+                  name: 'Google Workspace / Gmail',
+                  desc: 'Direct SMTP via personal @gmail.com or business Google Workspace (using App Password)',
+                  highlight: true
+                },
+                {
                   id: 'brevo',
                   name: 'Brevo (Sendinblue)',
-                  desc: 'Recommended for transactional emails & high deliverability',
-                  recommended: true
+                  desc: 'Recommended for transactional emails & high deliverability'
                 },
                 {
                   id: 'sendgrid',
@@ -183,14 +245,9 @@ export default function AdminEmailSettingsPage() {
                   desc: 'Cloud SMTP & Mail API for enterprise volumes'
                 },
                 {
-                  id: 'gmail',
-                  name: 'Google Workspace',
-                  desc: 'Direct SMTP via company Google Workspace account'
-                },
-                {
                   id: 'mock',
                   name: 'Local / Development',
-                  desc: 'Logs email payloads safely to console without external dispatch'
+                  desc: 'Logs email payloads safely to server console without external dispatch'
                 }
               ].map((p) => (
                 <div
@@ -204,9 +261,9 @@ export default function AdminEmailSettingsPage() {
                 >
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-semibold text-sm text-white">{p.name}</span>
-                    {p.recommended && (
+                    {p.highlight && (
                       <Badge className="bg-[#D9F45F] text-[#151414] text-[10px] font-bold">
-                        RECOMMENDED
+                        ACTIVE
                       </Badge>
                     )}
                   </div>
@@ -264,17 +321,112 @@ export default function AdminEmailSettingsPage() {
                 <Input
                   value={settings.adminNotificationEmail}
                   onChange={(e) => setSettings({ ...settings, adminNotificationEmail: e.target.value })}
-                  placeholder="contact@silwasa.com"
+                  placeholder="vimaldigiello@gmail.com"
                   className="bg-[#151414] border-[#2A2B28] text-white text-sm"
                   required
                 />
-                <p className="text-[11px] text-zinc-500 mt-1">Instant project inquiries will be routed to this inbox.</p>
+                <p className="text-[11px] text-zinc-500 mt-1">Instant project inquiries submitted on the website will be routed to this inbox.</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Dynamic Provider Credentials */}
+        {settings.provider === 'gmail' && (
+          <Card className="bg-[#1C1B1B] border-[#2A2B28]">
+            <CardHeader>
+              <CardTitle className="text-lg text-white flex items-center gap-2">
+                <Key className="w-5 h-5 text-rose-400" />
+                Google Workspace & Gmail Credentials
+              </CardTitle>
+              <CardDescription className="text-zinc-400">
+                Works seamlessly with personal @gmail.com accounts (e.g. vimaldigiello@gmail.com) and Google Workspace business domains using a 16-character Google App Password.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-zinc-400 mb-1.5 block">
+                    Gmail Address / Workspace Email
+                  </label>
+                  <Input
+                    value={settings.gmailUser || ''}
+                    onChange={(e) => setSettings({ ...settings, gmailUser: e.target.value })}
+                    placeholder="vimaldigiello@gmail.com"
+                    className="bg-[#151414] border-[#2A2B28] text-white text-sm"
+                    required
+                  />
+                  <p className="text-[11px] text-zinc-500 mt-1">The Google Account email that generated the App Password.</p>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-medium text-zinc-400">
+                      Google App Password (16 characters)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="text-zinc-400 hover:text-white flex items-center gap-1 text-[11px]"
+                    >
+                      {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-[#D9F45F]" />}
+                      {showPassword ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? 'text' : 'password'}
+                      value={settings.gmailAppPassword || ''}
+                      onChange={(e) => setSettings({ ...settings, gmailAppPassword: e.target.value })}
+                      placeholder="xxxx xxxx xxxx xxxx"
+                      className="bg-[#151414] border-[#2A2B28] text-white text-sm font-mono pr-10"
+                      required
+                    />
+                  </div>
+                  <p className="text-[11px] text-zinc-500 mt-1">Generated from your Google Account with 2FA enabled. Spaces are stripped automatically.</p>
+                </div>
+              </div>
+
+              {/* Helpful Guide Box */}
+              <div className="bg-[#151414] border border-[#2A2B28] rounded-lg p-3 text-xs text-zinc-400 space-y-2">
+                <div className="flex items-center gap-2 text-zinc-200 font-semibold">
+                  <ShieldCheck className="w-4 h-4 text-[#D9F45F]" />
+                  <span>How to generate a Google App Password for your Gmail account:</span>
+                </div>
+                <ol className="list-decimal list-inside space-y-1 text-zinc-400 pl-1 leading-relaxed">
+                  <li>Ensure <strong>2-Step Verification (2FA)</strong> is enabled on your Google Account.</li>
+                  <li>
+                    Go to{' '}
+                    <a
+                      href="https://myaccount.google.com/apppasswords"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#D9F45F] hover:underline inline-flex items-center gap-0.5"
+                    >
+                      Google Account &gt; Security &gt; App passwords <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </li>
+                  <li>Type an app name (such as &quot;Silwasa CMS&quot;) and click <strong>Create</strong>.</li>
+                  <li>Copy the 16-letter password shown on screen and paste it into the password box above.</li>
+                </ol>
+                {settings.gmailUser && settings.fromEmail !== settings.gmailUser && (
+                  <div className="pt-1 border-t border-[#2A2B28]/60 flex items-center justify-between">
+                    <span className="text-[11px] text-zinc-400">
+                      Recommendation: Set &quot;From Email&quot; to match your Gmail ({settings.gmailUser}) for 100% reliable inbox delivery.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSettings((prev) => ({ ...prev, fromEmail: prev.gmailUser || '' }))}
+                      className="text-[11px] text-[#D9F45F] hover:underline font-semibold"
+                    >
+                      Use Gmail as From Email
+                    </button>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {settings.provider === 'brevo' && (
           <Card className="bg-[#1C1B1B] border-[#2A2B28]">
             <CardHeader>
@@ -283,21 +435,42 @@ export default function AdminEmailSettingsPage() {
                 Brevo API Credentials
               </CardTitle>
               <CardDescription className="text-zinc-400">
-                Obtain your transactional v3 API key from your Brevo Dashboard.
+                Obtain your transactional v3 API key from your Brevo Dashboard (SMTP &amp; API &gt; API Keys).
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-xs font-medium text-zinc-400 mb-1.5 block">
-                  Brevo v3 API Key
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-medium text-zinc-400">
+                    Brevo v3 API Key
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-zinc-400 hover:text-white flex items-center gap-1 text-[11px]"
+                  >
+                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-blue-400" />}
+                    {showPassword ? 'Hide' : 'Show'}
+                  </button>
+                </div>
                 <Input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={settings.brevoApiKey || ''}
                   onChange={(e) => setSettings({ ...settings, brevoApiKey: e.target.value })}
                   placeholder="xkeysib-..."
                   className="bg-[#151414] border-[#2A2B28] text-white text-sm font-mono"
+                  required
                 />
+              </div>
+              <div className="text-xs text-zinc-500">
+                <a
+                  href="https://app.brevo.com/settings/keys/api"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:underline inline-flex items-center gap-1"
+                >
+                  Open Brevo API Keys Page <ExternalLink className="w-3 h-3" />
+                </a>
               </div>
             </CardContent>
           </Card>
@@ -311,84 +484,65 @@ export default function AdminEmailSettingsPage() {
                 SendGrid API Credentials
               </CardTitle>
               <CardDescription className="text-zinc-400">
-                Generate an API key with &quot;Mail Send&quot; permissions in SendGrid.
+                Generate an API key with &quot;Mail Send&quot; permissions in Twilio SendGrid.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-xs font-medium text-zinc-400 mb-1.5 block">
-                  SendGrid API Key
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-medium text-zinc-400">
+                    SendGrid API Key
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-zinc-400 hover:text-white flex items-center gap-1 text-[11px]"
+                  >
+                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-purple-400" />}
+                    {showPassword ? 'Hide' : 'Show'}
+                  </button>
+                </div>
                 <Input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={settings.sendgridApiKey || ''}
                   onChange={(e) => setSettings({ ...settings, sendgridApiKey: e.target.value })}
                   placeholder="SG...."
                   className="bg-[#151414] border-[#2A2B28] text-white text-sm font-mono"
+                  required
                 />
               </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {settings.provider === 'gmail' && (
-          <Card className="bg-[#1C1B1B] border-[#2A2B28]">
-            <CardHeader>
-              <CardTitle className="text-lg text-white flex items-center gap-2">
-                <Key className="w-5 h-5 text-rose-400" />
-                Google Workspace / Gmail Credentials
-              </CardTitle>
-              <CardDescription className="text-zinc-400">
-                Use your Workspace email and a 16-character Google App Password (with 2-Factor Authentication enabled).
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-medium text-zinc-400 mb-1.5 block">
-                    Workspace Email / Username
-                  </label>
-                  <Input
-                    value={settings.gmailUser || ''}
-                    onChange={(e) => setSettings({ ...settings, gmailUser: e.target.value })}
-                    placeholder="contact@silwasa.com"
-                    className="bg-[#151414] border-[#2A2B28] text-white text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-zinc-400 mb-1.5 block">
-                    Google App Password
-                  </label>
-                  <Input
-                    type="password"
-                    value={settings.gmailAppPassword || ''}
-                    onChange={(e) => setSettings({ ...settings, gmailAppPassword: e.target.value })}
-                    placeholder="xxxx xxxx xxxx xxxx"
-                    className="bg-[#151414] border-[#2A2B28] text-white text-sm font-mono"
-                  />
-                </div>
+              <div className="text-xs text-zinc-500">
+                <a
+                  href="https://app.sendgrid.com/settings/api_keys"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-purple-400 hover:underline inline-flex items-center gap-1"
+                >
+                  Open SendGrid API Keys Dashboard <ExternalLink className="w-3 h-3" />
+                </a>
               </div>
             </CardContent>
           </Card>
         )}
 
         {/* Action Bar */}
-        <div className="flex items-center justify-between pt-4 border-t border-[#2A2B28]">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-4 border-t border-[#2A2B28]">
           <Button
             type="submit"
             disabled={saving}
-            className="bg-[#663399] hover:bg-[#52297A] text-white font-semibold px-6"
+            className="bg-[#663399] hover:bg-[#52297A] text-white font-semibold px-6 shadow-md"
           >
-            {saving ? 'Saving...' : 'Save Email Configuration'}
+            {saving ? 'Saving Configuration...' : 'Save Email Configuration'}
           </Button>
 
-          {/* Test Email Section */}
+          {/* Real Test Email Section */}
           <div className="flex items-center gap-2">
             <Input
+              type="email"
               value={testEmailAddress}
               onChange={(e) => setTestEmailAddress(e.target.value)}
-              placeholder="Test email recipient"
-              className="bg-[#151414] border-[#2A2B28] text-white text-xs w-56"
+              placeholder="Test email recipient address"
+              className="bg-[#151414] border-[#2A2B28] text-white text-xs w-64"
             />
             <Button
               type="button"
@@ -396,10 +550,10 @@ export default function AdminEmailSettingsPage() {
               size="sm"
               onClick={handleSendTest}
               disabled={testing || !testEmailAddress}
-              className="border-[#2A2B28] text-[#D9F45F] hover:bg-[#D9F45F]/10 text-xs"
+              className="border-[#2A2B28] text-[#D9F45F] hover:bg-[#D9F45F]/10 text-xs shrink-0"
             >
               <Send className="w-3.5 h-3.5 mr-1" />
-              {testing ? 'Sending...' : 'Send Test'}
+              {testing ? 'Sending...' : 'Send Test Email'}
             </Button>
           </div>
         </div>

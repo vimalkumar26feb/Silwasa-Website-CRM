@@ -15,6 +15,7 @@ router.get('/general', authenticate, settingsController.getGeneralSettings);
 router.put('/general', authenticate, settingsController.updateGeneralSettings);
 router.get('/email', authenticate, settingsController.getEmailSettings);
 router.put('/email', authenticate, settingsController.updateEmailSettings);
+router.post('/email/test', authenticate, settingsController.sendTestEmail);
 
 // SEO & Analytics routes
 router.get('/seo', authenticate, settingsController.getSeoSettings);

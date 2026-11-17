@@ -240,4 +240,86 @@ describe('Phase 4: Settings & Media Management API', () => {
     expect(res.body.data.deletedCount).toBe(2);
     expect(res.body.data.skippedCount).toBe(0);
   });
+
+  it('GET /api/v1/admin/settings/email retrieves stored email configuration', async () => {
+    vi.spyOn(settingsRepository, 'getSetting').mockImplementation(async (key: string) => {
+      if (key === 'email') {
+        return {
+          provider: 'gmail',
+          fromEmail: 'vimaldigiello@gmail.com',
+          fromName: 'Silwasa IT Solutions',
+          adminNotificationEmail: 'vimaldigiello@gmail.com',
+          brevoApiKey: '',
+          sendgridApiKey: '',
+          gmailUser: 'vimaldigiello@gmail.com',
+          gmailAppPassword: 'abcd efgh ijkl mnop',
+        };
+      }
+      return null;
+    });
+
+    const res = await request(app)
+      .get('/api/v1/admin/settings/email')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.provider).toBe('gmail');
+    expect(res.body.data.gmailUser).toBe('vimaldigiello@gmail.com');
+  });
+
+  it('PUT /api/v1/admin/settings/email persists provider settings and credentials', async () => {
+    const payload = {
+      provider: 'gmail',
+      fromEmail: 'vimaldigiello@gmail.com',
+      fromName: 'Silwasa IT Solutions',
+      adminNotificationEmail: 'vimaldigiello@gmail.com',
+      gmailUser: 'vimaldigiello@gmail.com',
+      gmailAppPassword: 'abcd efgh ijkl mnop',
+    };
+
+    vi.spyOn(settingsRepository, 'setSetting').mockResolvedValue({
+      id: 'email-1',
+      key: 'email',
+      value: payload as object,
+      updatedAt: new Date(),
+    });
+    vi.spyOn(userRepository, 'logActivity').mockResolvedValue(null);
+
+    const res = await request(app)
+      .put('/api/v1/admin/settings/email')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(payload);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.provider).toBe('gmail');
+    expect(res.body.data.gmailUser).toBe('vimaldigiello@gmail.com');
+  });
+
+  it('POST /api/v1/admin/settings/email/test dispatches test email with mock provider', async () => {
+    vi.spyOn(settingsRepository, 'getSetting').mockImplementation(async (key: string) => {
+      if (key === 'email') {
+        return {
+          provider: 'mock',
+          fromEmail: 'contact@silwasa.com',
+          fromName: 'Silwasa IT Solutions',
+        };
+      }
+      return null;
+    });
+    vi.spyOn(userRepository, 'logActivity').mockResolvedValue(null);
+
+    const res = await request(app)
+      .post('/api/v1/admin/settings/email/test')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        to: 'test@silwasa.com',
+        settings: { provider: 'mock' }
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.message).toContain('test@silwasa.com');
+  });
 });

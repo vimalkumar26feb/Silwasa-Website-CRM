@@ -2,6 +2,7 @@ import { settingsRepository } from '../repositories/settings.repository.js';
 import { userRepository } from '../repositories/user.repository.js';
 import { DEFAULT_THEME, DEFAULT_BRANDING } from '@silwasa/shared';
 import { ThemeSettings, GeneralSettings } from '@silwasa/types';
+import { createEmailProviderFromSettings, EmailPayload } from '../integrations/email/index.js';
 
 export class SettingsService {
   async getPublicSettings() {
@@ -104,15 +105,83 @@ export class SettingsService {
   }
 
   async updateEmailSettings(data: any, userId: string, userName: string) {
-    await settingsRepository.setSetting('email', data);
+    const sanitizedData = {
+      provider: (data.provider || 'mock').toString().toLowerCase().trim(),
+      fromEmail: (data.fromEmail || 'contact@silwasa.com').toString().trim(),
+      fromName: (data.fromName || 'Silwasa IT Solutions').toString().trim(),
+      adminNotificationEmail: (data.adminNotificationEmail || 'contact@silwasa.com').toString().trim(),
+      brevoApiKey: (data.brevoApiKey || '').toString().trim(),
+      sendgridApiKey: (data.sendgridApiKey || '').toString().trim(),
+      gmailUser: (data.gmailUser || '').toString().trim(),
+      gmailAppPassword: (data.gmailAppPassword || '').toString().trim(),
+    };
+
+    await settingsRepository.setSetting('email', sanitizedData);
     await userRepository.logActivity({
       userId,
       userName,
       action: 'UPDATE_EMAIL_SETTINGS',
       module: 'SETTINGS',
-      details: { provider: data.provider, fromEmail: data.fromEmail }
+      details: { provider: sanitizedData.provider, fromEmail: sanitizedData.fromEmail }
     });
-    return data;
+    return sanitizedData;
+  }
+
+  async sendTestEmail(recipientEmail: string, overrideSettings?: any, userId?: string, userName?: string) {
+    const currentSettings = await this.getEmailSettings();
+    const effectiveSettings = { ...currentSettings, ...(overrideSettings || {}) };
+
+    const provider = createEmailProviderFromSettings(effectiveSettings);
+
+    const testPayload: EmailPayload = {
+      to: recipientEmail,
+      subject: `[Silwasa Test] SMTP & Email Configuration Verified (${(effectiveSettings.provider || 'MOCK').toUpperCase()})`,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #151414; color: #FFFFFF; border: 1px solid #2A2B28; border-radius: 12px; overflow: hidden;">
+          <div style="background: linear-gradient(135deg, #1C1B1B 0%, #2A1F3D 100%); padding: 24px; border-bottom: 2px solid #663399; text-align: center;">
+            <h2 style="margin: 0 0 6px 0; color: #D9F45F; font-size: 20px;">Email Configuration Verified!</h2>
+            <p style="margin: 0; color: #A1A1AA; font-size: 13px;">Silwasa IT Solutions CMS Email Integration</p>
+          </div>
+          <div style="padding: 24px;">
+            <p style="font-size: 14px; color: #E4E4E7; line-height: 1.6;">
+              This is an automated verification email confirming that your email provider credentials are valid and active.
+            </p>
+            <div style="background: #1C1B1B; border: 1px solid #2A2B28; border-radius: 8px; padding: 16px; margin: 20px 0;">
+              <p style="margin: 0 0 8px 0; font-size: 13px; color: #A1A1AA;">Provider: <strong style="color: #D9F45F;">${(effectiveSettings.provider || 'mock').toUpperCase()}</strong></p>
+              <p style="margin: 0 0 8px 0; font-size: 13px; color: #A1A1AA;">Sender Email: <strong style="color: #FFFFFF;">${effectiveSettings.fromEmail || 'contact@silwasa.com'}</strong></p>
+              <p style="margin: 0 0 8px 0; font-size: 13px; color: #A1A1AA;">Sender Display Name: <strong style="color: #FFFFFF;">${effectiveSettings.fromName || 'Silwasa IT Solutions'}</strong></p>
+              <p style="margin: 0; font-size: 13px; color: #A1A1AA;">Dispatched At: <strong style="color: #FFFFFF;">${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST</strong></p>
+            </div>
+            <p style="font-size: 12px; color: #71717A; margin-bottom: 0;">
+              Your CMS is now ready to send live client confirmations and receive instant lead notifications.
+            </p>
+          </div>
+        </div>
+      `,
+      text: `Email configuration test successful via ${effectiveSettings.provider}. Sender: ${effectiveSettings.fromEmail}`
+    };
+
+    const result = await provider.sendEmail(testPayload);
+
+    if (userId) {
+      await userRepository.logActivity({
+        userId,
+        userName: userName || 'Admin',
+        action: 'TEST_EMAIL_SETTINGS',
+        module: 'SETTINGS',
+        details: {
+          recipient: recipientEmail,
+          provider: effectiveSettings.provider,
+          success: result.success,
+          error: result.error
+        }
+      });
+    }
+
+    return {
+      ...result,
+      provider: effectiveSettings.provider,
+    };
   }
 
   async getSeoSettings() {

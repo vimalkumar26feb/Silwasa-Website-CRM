@@ -3,12 +3,40 @@ import { BrevoEmailProvider } from './brevo.email.js';
 import { SendGridEmailProvider } from './sendgrid.email.js';
 import { GmailEmailProvider } from './gmail.email.js';
 import { MockEmailProvider } from './mock.email.js';
+import { settingsRepository } from '../../repositories/settings.repository.js';
 
 export * from './email.interface.js';
 export * from './brevo.email.js';
 export * from './sendgrid.email.js';
 export * from './gmail.email.js';
 export * from './mock.email.js';
+
+export function createEmailProviderFromSettings(settings: {
+  provider?: string;
+  fromEmail?: string;
+  fromName?: string;
+  brevoApiKey?: string | null;
+  sendgridApiKey?: string | null;
+  gmailUser?: string | null;
+  gmailAppPassword?: string | null;
+}): EmailProvider {
+  const provider = (settings.provider || process.env.EMAIL_PROVIDER || 'mock').toLowerCase();
+  const fromEmail = settings.fromEmail || process.env.EMAIL_FROM || 'contact@silwasa.com';
+  const fromName = settings.fromName || process.env.EMAIL_FROM_NAME || 'Silwasa IT Solutions';
+
+  switch (provider) {
+    case 'brevo':
+      return new BrevoEmailProvider(settings.brevoApiKey || undefined, fromEmail, fromName);
+    case 'sendgrid':
+      return new SendGridEmailProvider(settings.sendgridApiKey || undefined, fromEmail, fromName);
+    case 'gmail':
+    case 'smtp':
+      return new GmailEmailProvider(settings.gmailUser || undefined, settings.gmailAppPassword || undefined, fromEmail, fromName);
+    case 'mock':
+    default:
+      return new MockEmailProvider();
+  }
+}
 
 export function getEmailProvider(preferred?: string): EmailProvider {
   const provider = preferred || process.env.EMAIL_PROVIDER || 'mock';
@@ -41,23 +69,50 @@ export interface EnquiryEmailData {
 }
 
 export class NotificationEmailService {
-  private provider: EmailProvider;
-  private adminEmail: string;
+  private explicitProvider: EmailProvider | null = null;
+  private explicitAdminEmail?: string;
 
   constructor(provider?: EmailProvider, adminEmail = 'contact@silwasa.com') {
-    this.provider = provider || getEmailProvider();
-    this.adminEmail = adminEmail || process.env.ADMIN_NOTIFICATION_EMAIL || 'contact@silwasa.com';
+    this.explicitProvider = provider || null;
+    this.explicitAdminEmail = adminEmail;
   }
 
   setProvider(provider: EmailProvider) {
-    this.provider = provider;
+    this.explicitProvider = provider;
   }
 
-  getProviderName(): string {
-    return this.provider.name;
+  async getActiveProvider(): Promise<{ provider: EmailProvider; adminEmail: string }> {
+    if (this.explicitProvider) {
+      return {
+        provider: this.explicitProvider,
+        adminEmail: this.explicitAdminEmail || process.env.ADMIN_NOTIFICATION_EMAIL || 'contact@silwasa.com'
+      };
+    }
+
+    try {
+      const raw = await settingsRepository.getSetting<any>('email');
+      if (raw && raw.provider) {
+        const provider = createEmailProviderFromSettings(raw);
+        const adminEmail = raw.adminNotificationEmail || process.env.ADMIN_NOTIFICATION_EMAIL || 'contact@silwasa.com';
+        return { provider, adminEmail };
+      }
+    } catch {
+      // Fallback if database query fails
+    }
+
+    return {
+      provider: getEmailProvider(),
+      adminEmail: process.env.ADMIN_NOTIFICATION_EMAIL || 'contact@silwasa.com'
+    };
+  }
+
+  async getProviderName(): Promise<string> {
+    const { provider } = await this.getActiveProvider();
+    return provider.name;
   }
 
   async sendLeadNotificationToAdmin(enquiry: EnquiryEmailData) {
+    const { provider, adminEmail } = await this.getActiveProvider();
     const formattedDate = new Date(enquiry.createdAt).toLocaleString('en-IN', {
       timeZone: 'Asia/Kolkata',
       dateStyle: 'medium',
@@ -120,14 +175,15 @@ export class NotificationEmailService {
       </div>
     `;
 
-    return this.provider.sendEmail({
-      to: this.adminEmail,
+    return provider.sendEmail({
+      to: adminEmail,
       subject: `[New Lead] ${enquiry.service || 'Project Enquiry'} from ${enquiry.name} (${enquiry.enquiryId})`,
       html
     });
   }
 
   async sendConfirmationToClient(enquiry: EnquiryEmailData) {
+    const { provider } = await this.getActiveProvider();
     const html = `
       <div style="font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #151414; color: #FFFFFF; border: 1px solid #2A2B28; border-radius: 12px; overflow: hidden;">
         <div style="background: linear-gradient(135deg, #1C1B1B 0%, #2A1F3D 100%); padding: 28px; border-bottom: 2px solid #663399; text-align: center;">
@@ -163,7 +219,7 @@ export class NotificationEmailService {
       </div>
     `;
 
-    return this.provider.sendEmail({
+    return provider.sendEmail({
       to: enquiry.email,
       toName: enquiry.name,
       subject: `Thank you for contacting Silwasa IT Solutions [${enquiry.enquiryId}]`,

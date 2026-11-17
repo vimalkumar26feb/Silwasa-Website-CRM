@@ -7,9 +7,9 @@ export class SendGridEmailProvider implements EmailProvider {
   private fromName: string;
 
   constructor(apiKey?: string, fromEmail = 'contact@silwasa.com', fromName = 'Silwasa IT Solutions') {
-    this.apiKey = apiKey || process.env.SENDGRID_API_KEY || '';
-    this.fromEmail = fromEmail || process.env.EMAIL_FROM || 'contact@silwasa.com';
-    this.fromName = fromName || process.env.EMAIL_FROM_NAME || 'Silwasa IT Solutions';
+    this.apiKey = (apiKey || process.env.SENDGRID_API_KEY || '').trim();
+    this.fromEmail = (fromEmail || process.env.EMAIL_FROM || 'contact@silwasa.com').trim();
+    this.fromName = (fromName || process.env.EMAIL_FROM_NAME || 'Silwasa IT Solutions').trim();
   }
 
   async sendEmail(payload: EmailPayload): Promise<{ success: boolean; messageId?: string; error?: string }> {
