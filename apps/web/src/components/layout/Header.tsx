@@ -287,20 +287,30 @@ function getCustomOrNamedIcon(iconName?: string, label?: string) {
   return getMenuItemIcon(label || '');
 }
 
-export function Header() {
+export interface HeaderProps {
+  initialLogo?: string | null;
+}
+
+export function Header({ initialLogo }: HeaderProps = {}) {
   const pathname = usePathname();
   const [items, setItems] = useState<MenuItem[]>(DEFAULT_HEADER_ITEMS);
-  const [brandLogo, setBrandLogo] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('silwasa_brand_logo') || null;
-    }
-    return null;
-  });
-  const [settingsLoaded, setSettingsLoaded] = useState<boolean>(false);
+  const [brandLogo, setBrandLogo] = useState<string | null>(initialLogo ?? null);
+  const [mounted, setMounted] = useState<boolean>(false);
+  const [settingsLoaded, setSettingsLoaded] = useState<boolean>(Boolean(initialLogo));
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeMegaMenuId, setActiveMegaMenuId] = useState<string | null>(null);
   const [mobileExpandedId, setMobileExpandedId] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('silwasa_brand_logo');
+      if (cached && !brandLogo) {
+        setBrandLogo(cached);
+      }
+    }
+  }, [brandLogo]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -373,15 +383,19 @@ export function Header() {
     >
       <div className="max-w-[1369px] mx-auto px-4 sm:px-6 lg:px-8 relative">
         <div className="flex items-center justify-between h-20">
-          {/* Brand Logo - Prioritizes logo first, zero flash of text */}
-          <Link href="/" className="flex items-center gap-2 group min-h-[40px] min-w-[140px]">
+          {/* Brand Logo - Prioritizes logo first, zero hydration mismatch */}
+          <Link
+            href="/"
+            className="flex items-center gap-2 group min-h-[40px] min-w-[140px]"
+            suppressHydrationWarning
+          >
             {brandLogo ? (
               <img
                 src={brandLogo}
                 alt="Silwasa IT Solutions"
                 className="h-10 w-auto max-w-[200px] object-contain rounded-lg"
               />
-            ) : !settingsLoaded ? (
+            ) : !mounted ? (
               <div className="h-10 w-36 rounded-lg bg-white/[0.04] animate-pulse" />
             ) : (
               <>

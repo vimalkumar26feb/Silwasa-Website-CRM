@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import { SectionRegistry } from '../components/sections/SectionRegistry';
+import { getPublicSettingsServer } from '../lib/settings';
 import type { Page, PageSection } from '@silwasa/types';
 
 export const metadata: Metadata = {
@@ -213,15 +214,20 @@ async function getHomepageData(): Promise<PageSection[]> {
 }
 
 export default async function HomePage() {
-  const sections = await getHomepageData();
+  const [sections, settings] = await Promise.all([
+    getHomepageData(),
+    getPublicSettingsServer(),
+  ]);
+
+  const initialLogo = settings?.general?.logoUrl || null;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#151414] text-white">
-      <Header />
+      <Header initialLogo={initialLogo} />
       <main className="flex-1">
         <SectionRegistry sections={sections} />
       </main>
-      <Footer />
+      <Footer initialLogo={initialLogo} />
     </div>
   );
 }

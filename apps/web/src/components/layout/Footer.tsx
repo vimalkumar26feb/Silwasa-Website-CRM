@@ -4,15 +4,25 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Mail, Phone, MapPin, MessageCircle, ArrowUpRight, Github, Twitter, Linkedin } from 'lucide-react';
 
-export function Footer() {
+export interface FooterProps {
+  initialLogo?: string | null;
+}
+
+export function Footer({ initialLogo }: FooterProps = {}) {
   const currentYear = new Date().getFullYear();
-  const [brandLogo, setBrandLogo] = useState<string | null>(() => {
+  const [brandLogo, setBrandLogo] = useState<string | null>(initialLogo ?? null);
+  const [mounted, setMounted] = useState<boolean>(false);
+  const [settingsLoaded, setSettingsLoaded] = useState<boolean>(Boolean(initialLogo));
+
+  useEffect(() => {
+    setMounted(true);
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('silwasa_brand_logo') || null;
+      const cached = localStorage.getItem('silwasa_brand_logo');
+      if (cached && !brandLogo) {
+        setBrandLogo(cached);
+      }
     }
-    return null;
-  });
-  const [settingsLoaded, setSettingsLoaded] = useState<boolean>(false);
+  }, [brandLogo]);
 
   useEffect(() => {
     async function loadLogo() {
@@ -49,14 +59,18 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 lg:gap-8">
           {/* Brand & Mission (4 cols) */}
           <div className="lg:col-span-4 space-y-5">
-            <Link href="/" className="flex items-center gap-2 group min-h-[40px] min-w-[140px]">
+            <Link
+              href="/"
+              className="flex items-center gap-2 group min-h-[40px] min-w-[140px]"
+              suppressHydrationWarning
+            >
               {brandLogo ? (
                 <img
                   src={brandLogo}
                   alt="Silwasa IT Solutions"
                   className="h-10 w-auto max-w-[200px] object-contain rounded-lg"
                 />
-              ) : !settingsLoaded ? (
+              ) : !mounted ? (
                 <div className="h-10 w-36 rounded-lg bg-white/[0.04] animate-pulse" />
               ) : (
                 <>
