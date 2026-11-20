@@ -85,6 +85,8 @@ export default function AdminSettingsPage() {
     name: 'socialLinks',
   });
 
+  const [availablePages, setAvailablePages] = useState<Array<{ id: string; title: string; slug: string; isPublished: boolean }>>([]);
+
   useEffect(() => {
     async function loadSettings() {
       try {
@@ -93,6 +95,11 @@ export default function AdminSettingsPage() {
         );
         if (res.success && res.data) {
           reset(res.data);
+        }
+
+        const pagesRes = await apiClient<{ success: boolean; data: any[] }>('/admin/pages');
+        if (pagesRes.success && Array.isArray(pagesRes.data)) {
+          setAvailablePages(pagesRes.data);
         }
       } catch {
         // Fallback or defaults loaded
@@ -206,6 +213,40 @@ export default function AdminSettingsPage() {
                 placeholder="Premier digital technology agency..."
                 {...register('businessDescription')}
               />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card: Frontpage & Homepage Selection */}
+        <Card className="border-[#663399]/40 bg-[#1C1B1B]">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#D9F45F]" />
+              <CardTitle>Homepage &amp; Frontpage Display</CardTitle>
+            </div>
+            <CardDescription>
+              Select which modular page is served as your live root frontpage (https://silwasa.com/)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-white/80 mb-2">
+                Active Website Frontpage
+              </label>
+              <select
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#151414] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#D9F45F]"
+                {...register('homePageSlug')}
+              >
+                <option value="home">Default Home Page (slug: /)</option>
+                {availablePages.map((pg) => (
+                  <option key={pg.id} value={pg.slug}>
+                    {pg.title} (slug: /{pg.slug}) {pg.isPublished ? '— Live' : '— Draft'}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-2 text-[11px] text-white/50 leading-relaxed">
+                When visitors arrive at your website domain root, this selected page layout and its sections will be loaded and rendered dynamically.
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -399,153 +440,6 @@ export default function AdminSettingsPage() {
                 error={errors.copyrightText?.message}
                 {...register('copyrightText')}
               />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Card: Brand Assets & Visual Identity */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Brand Assets &amp; Visual Identity</CardTitle>
-            <CardDescription>Upload or configure official site logo and browser favicon (siticon)</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Brand Logo */}
-              <div className="space-y-3 p-4 rounded-xl bg-[#151414] border border-[#2A2B28]">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-semibold text-white/90">
-                    Primary Brand Logo
-                  </label>
-                  <div className="flex items-center gap-2">
-                    {uploadingLogo && (
-                      <span className="text-[11px] text-[#D9F45F] animate-pulse">Uploading...</span>
-                    )}
-                    {logoUrlVal && (
-                      <button
-                        type="button"
-                        onClick={() => setValue('logoUrl', '', { shouldDirty: true })}
-                        className="text-[11px] text-rose-400 hover:text-rose-300 flex items-center gap-1 font-normal transition"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        Remove Logo
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <div className="w-20 h-16 rounded-lg bg-[#1C1B1B] border border-[#2A2B28] flex items-center justify-center overflow-hidden shrink-0">
-                    {logoUrlVal ? (
-                      <img src={logoUrlVal} alt="Logo Preview" className="max-h-full max-w-full object-contain" />
-                    ) : (
-                      <ImageIcon className="w-6 h-6 text-white/30" />
-                    )}
-                  </div>
-
-                  <div className="flex-1 space-y-2">
-                    <input
-                      type="text"
-                      placeholder="https://... or upload image"
-                      className="w-full px-3 py-1.5 rounded-md bg-[#1C1B1B] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#663399]"
-                      {...register('logoUrl')}
-                    />
-                    <div className="flex items-center gap-2">
-                      <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#663399]/20 hover:bg-[#663399]/30 text-white text-xs font-medium cursor-pointer border border-[#663399]/40 transition">
-                        <UploadCloud className="w-3.5 h-3.5 text-[#D9F45F]" />
-                        <span>Upload Logo File</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleAssetUpload(file, 'logoUrl');
-                          }}
-                        />
-                      </label>
-                      {logoUrlVal && (
-                        <button
-                          type="button"
-                          onClick={() => setValue('logoUrl', '', { shouldDirty: true })}
-                          className="px-2.5 py-1.5 rounded-md bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 text-xs font-medium border border-rose-500/30 transition flex items-center gap-1"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                          <span>Clear</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Brand Favicon (Siticon) */}
-              <div className="space-y-3 p-4 rounded-xl bg-[#151414] border border-[#2A2B28]">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-semibold text-white/90">
-                    Browser Favicon (Siticon)
-                  </label>
-                  <div className="flex items-center gap-2">
-                    {uploadingFavicon && (
-                      <span className="text-[11px] text-[#D9F45F] animate-pulse">Uploading...</span>
-                    )}
-                    {faviconUrlVal && (
-                      <button
-                        type="button"
-                        onClick={() => setValue('faviconUrl', '', { shouldDirty: true })}
-                        className="text-[11px] text-rose-400 hover:text-rose-300 flex items-center gap-1 font-normal transition"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        Remove Favicon
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-lg bg-[#1C1B1B] border border-[#2A2B28] flex items-center justify-center overflow-hidden shrink-0">
-                    {faviconUrlVal ? (
-                      <img src={faviconUrlVal} alt="Favicon Preview" className="w-8 h-8 object-contain" />
-                    ) : (
-                      <ImageIcon className="w-6 h-6 text-white/30" />
-                    )}
-                  </div>
-
-                  <div className="flex-1 space-y-2">
-                    <input
-                      type="text"
-                      placeholder="https://... or upload .ico/.png"
-                      className="w-full px-3 py-1.5 rounded-md bg-[#1C1B1B] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#663399]"
-                      {...register('faviconUrl')}
-                    />
-                    <div className="flex items-center gap-2">
-                      <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#663399]/20 hover:bg-[#663399]/30 text-white text-xs font-medium cursor-pointer border border-[#663399]/40 transition">
-                        <UploadCloud className="w-3.5 h-3.5 text-[#D9F45F]" />
-                        <span>Upload Favicon File</span>
-                        <input
-                          type="file"
-                          accept="image/x-icon,image/png,image/svg+xml,image/jpeg"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleAssetUpload(file, 'faviconUrl');
-                          }}
-                        />
-                      </label>
-                      {faviconUrlVal && (
-                        <button
-                          type="button"
-                          onClick={() => setValue('faviconUrl', '', { shouldDirty: true })}
-                          className="px-2.5 py-1.5 rounded-md bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 text-xs font-medium border border-rose-500/30 transition flex items-center gap-1"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                          <span>Clear</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           </CardContent>
         </Card>

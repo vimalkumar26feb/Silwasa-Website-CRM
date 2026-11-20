@@ -95,3 +95,14 @@ export const DEFAULT_BRANDING = {
   timezone: 'Asia/Kolkata',
   defaultCurrency: 'INR'
 };
+
+export const DEFAULT_ANIMATION = {
+  enabled: true,
+  preset: 'luxury' as const,
+  scrollReveal: 'fade-up' as const,
+  headingAnimation: 'fade-up' as const,
+  cardHoverEffect: 'lift-glow' as const,
+  buttonEffect: 'shine-sweep' as const,
+  speed: 'normal' as const,
+  staggerChildren: true,
+};

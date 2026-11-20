@@ -140,6 +140,7 @@ export function ServicesSection({ settings }: { settings: ServicesSectionSetting
   const viewAllUrl = settings?.viewAllUrl || '/services';
 
   const [servicesList, setServicesList] = useState<ServiceItem[]>(settings?.services || []);
+  const [isLoading, setIsLoading] = useState(!settings?.services || settings.services.length === 0);
   const [activeCategory, setActiveCategory] = useState<string>(selectedCat);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const carouselTrackRef = useRef<HTMLDivElement>(null);
@@ -147,12 +148,14 @@ export function ServicesSection({ settings }: { settings: ServicesSectionSetting
   useEffect(() => {
     if (settings?.services && settings.services.length > 0) {
       setServicesList(settings.services);
+      setIsLoading(false);
       return;
     }
 
     let isMounted = true;
     async function loadDynamicServices() {
       try {
+        setIsLoading(true);
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
         const res = await fetch(`${apiUrl}/services`);
         if (res.ok) {
@@ -170,11 +173,14 @@ export function ServicesSection({ settings }: { settings: ServicesSectionSetting
               featuredImageUrl: item.featuredImageUrl,
             }));
             setServicesList(mapped);
+            setIsLoading(false);
             return;
           }
         }
       } catch {
         // Fallback to default
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
       if (isMounted && (!servicesList || servicesList.length === 0)) {
         setServicesList(DEFAULT_SERVICES);
@@ -307,8 +313,26 @@ export function ServicesSection({ settings }: { settings: ServicesSectionSetting
           </div>
         )}
 
-        {/* Content Render: Grid vs Carousel */}
-        {layout === 'carousel' ? (
+        {/* Content Render: Loading Skeletons vs Grid vs Carousel */}
+        {isLoading ? (
+          <div className={getGridColsClass()}>
+            {Array.from({ length: desktopCols || 3 }).map((_, i) => (
+              <div
+                key={i}
+                className="p-8 rounded-2xl bg-[#1C1B1B] border border-[#2A2B28] animate-pulse space-y-5"
+              >
+                <div className="w-12 h-12 rounded-xl bg-white/10" />
+                <div className="h-6 w-1/2 bg-white/10 rounded-lg" />
+                <div className="h-4 w-5/6 bg-white/5 rounded-lg" />
+                <div className="h-4 w-3/4 bg-white/5 rounded-lg" />
+                <div className="space-y-2 pt-4 border-t border-[#2A2B28]/60">
+                  <div className="h-3 w-1/3 bg-white/5 rounded" />
+                  <div className="h-3 w-1/2 bg-white/5 rounded" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : layout === 'carousel' ? (
           <div className="relative overflow-hidden">
             <div
               ref={carouselTrackRef}

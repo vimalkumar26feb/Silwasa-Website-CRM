@@ -30,6 +30,46 @@ export default function AdminPagesListPage() {
   const [template, setTemplate] = useState<'blank' | 'standard'>('blank');
   const [isCreating, setIsCreating] = useState(false);
 
+  const [currentHomeSlug, setCurrentHomeSlug] = useState<string>('home');
+  const [rawGeneralSettings, setRawGeneralSettings] = useState<any>(null);
+
+  useEffect(() => {
+    async function loadGeneralSettings() {
+      try {
+        const res = await apiClient<{ success: boolean; data: any }>('/admin/settings/general');
+        if (res.success && res.data) {
+          setRawGeneralSettings(res.data);
+          if (res.data.homePageSlug) {
+            setCurrentHomeSlug(res.data.homePageSlug);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+    loadGeneralSettings();
+  }, []);
+
+  const handleSetAsFrontPage = async (targetPage: Page) => {
+    try {
+      const payload = {
+        ...(rawGeneralSettings || {}),
+        homePageSlug: targetPage.slug,
+        homePageId: targetPage.id,
+      };
+      await apiClient('/admin/settings/general', {
+        method: 'PUT',
+        body: payload,
+      });
+      setCurrentHomeSlug(targetPage.slug);
+      setRawGeneralSettings(payload);
+      setSuccessMessage(`Page "${targetPage.title}" (slug: /${targetPage.slug}) is now set as the active website frontpage!`);
+      setTimeout(() => setSuccessMessage(null), 4000);
+    } catch {
+      setActionError('Failed to set page as frontpage');
+    }
+  };
+
   const fetchPages = async () => {
     try {
       setLoading(true);
@@ -315,8 +355,13 @@ export default function AdminPagesListPage() {
                             <FileText className="w-4 h-4" />
                           </div>
                           <div>
-                            <div className="font-bold text-white hover:text-[#D9F45F] transition-colors">
+                            <div className="font-bold text-white hover:text-[#D9F45F] transition-colors flex items-center gap-2">
                               <Link href={`/admin/pages/${page.id}`}>{page.title}</Link>
+                              {(page.slug === currentHomeSlug || (currentHomeSlug === 'home' && page.slug === 'home')) && (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#663399] text-[#D9F45F] border border-[#D9F45F]/30 shadow-sm">
+                                  Front Page
+                                </span>
+                              )}
                             </div>
                             <div className="text-xs text-white/50 font-mono">
                               /{page.slug === 'home' ? '' : page.slug}
@@ -349,6 +394,18 @@ export default function AdminPagesListPage() {
 
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
+                          {!(page.slug === currentHomeSlug || (currentHomeSlug === 'home' && page.slug === 'home')) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-2.5 text-xs text-white/70 hover:text-[#D9F45F] hover:border-[#D9F45F]"
+                              onClick={() => handleSetAsFrontPage(page)}
+                              title="Set as live website frontpage"
+                            >
+                              Set Frontpage
+                            </Button>
+                          )}
+
                           <Link href={`/admin/pages/${page.id}`}>
                             <Button variant="outline" size="sm" className="h-8 px-2.5 text-xs">
                               <Edit3 className="w-3.5 h-3.5 mr-1" />

@@ -341,6 +341,8 @@ export interface GeneralSettings {
   defaultCurrency: string;
   logoUrl?: string;
   faviconUrl?: string;
+  homePageSlug?: string | null;
+  homePageId?: string | null;
   socialLinks: {
     platform: string;
     url: string;
@@ -384,4 +386,15 @@ export interface ApiResponse<T = unknown> {
     total?: number;
     totalPages?: number;
   };
+}
+
+export interface AnimationSettings {
+  enabled: boolean;
+  preset: 'luxury' | 'dynamic' | 'minimal' | 'custom';
+  scrollReveal: 'fade-up' | 'blur-in' | 'scale-up' | 'fade-in' | 'none';
+  headingAnimation: 'fade-up' | 'blur-glow' | 'slide-left' | 'none';
+  cardHoverEffect: 'lift-glow' | 'lime-border' | 'scale' | 'none';
+  buttonEffect: 'shine-sweep' | 'pulse-glow' | 'lift' | 'none';
+  speed: 'fast' | 'normal' | 'relaxed';
+  staggerChildren: boolean;
 }

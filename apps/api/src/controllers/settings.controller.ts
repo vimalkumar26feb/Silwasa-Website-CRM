@@ -293,6 +293,35 @@ export class SettingsController {
       next(error);
     }
   }
+
+  async getAnimationSettings(_req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const animations = await settingsService.getAnimationSettings();
+      res.status(200).json({
+        success: true,
+        data: animations,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updateAnimationSettings(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const updated = await settingsService.updateAnimationSettings(
+        req.body,
+        req.user!.id,
+        req.user!.name
+      );
+      res.status(200).json({
+        success: true,
+        data: updated,
+        message: 'Animation settings updated successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export const settingsController = new SettingsController();

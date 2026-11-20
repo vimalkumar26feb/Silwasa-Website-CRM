@@ -55,7 +55,7 @@ export default function AdminCategoriesPage() {
     try {
       setLoading(true);
       const res = await apiClient<{ success: boolean; data: CategoryItem[] }>('/admin/blogs/categories');
-      if (res.success && res.data && res.data.length > 0) {
+      if (res.success && Array.isArray(res.data)) {
         setCategories(res.data);
       } else {
         setCategories(SEEDED_CATEGORIES);
@@ -139,6 +139,7 @@ export default function AdminCategoriesPage() {
       }
 
       setIsModalOpen(false);
+      await fetchCategories();
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch {
       // Fallback
@@ -165,8 +166,8 @@ export default function AdminCategoriesPage() {
 
     try {
       await apiClient(`/admin/blogs/categories/${id}`, { method: 'DELETE' });
-      setCategories((prev) => prev.filter((c) => c.id !== id));
       setSuccessMessage(`Category "${catName}" deleted.`);
+      await fetchCategories();
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch {
       setCategories((prev) => prev.filter((c) => c.id !== id));

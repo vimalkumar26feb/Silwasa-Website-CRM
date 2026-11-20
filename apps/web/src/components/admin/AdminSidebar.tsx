@@ -83,6 +83,7 @@ const navGroups: NavGroup[] = [
       { label: 'SEO Management', href: '/admin/seo', icon: Search },
       { label: 'Email Settings', href: '/admin/email', icon: Mail },
       { label: 'Theme & Branding', href: '/admin/theme', icon: Paintbrush },
+      { label: 'Animations', href: '/admin/animations', icon: Sparkles },
       { label: 'General Settings', href: '/admin/settings', icon: Settings },
       { label: 'Users & Roles', href: '/admin/users', icon: Users },
     ],

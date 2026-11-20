@@ -27,32 +27,9 @@ export function createBlogRoutes(): { publicRouter: Router; adminRouter: Router 
   // Admin protected endpoints
   adminRouter.use(authenticate, requireRole(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.EDITOR));
 
-  adminRouter.get('/', (req, res, next) =>
-    blogController.listAllBlogs(req, res, next)
-  );
-
-  adminRouter.get('/:id', (req, res, next) =>
-    blogController.getBlogById(req, res, next)
-  );
-
-  adminRouter.post('/', (req, res, next) =>
-    blogController.createBlog(req, res, next)
-  );
-
-  adminRouter.put('/:id', (req, res, next) =>
-    blogController.updateBlog(req, res, next)
-  );
-
-  adminRouter.delete('/:id', (req, res, next) =>
-    blogController.deleteBlog(req, res, next)
-  );
-
+  // Category and Tag management must be registered before /:id parameter wildcard
   adminRouter.get('/categories', (req, res, next) =>
     blogController.getCategories(req, res, next)
-  );
-
-  adminRouter.get('/tags', (req, res, next) =>
-    blogController.getTags(req, res, next)
   );
 
   adminRouter.post('/categories', (req, res, next) =>
@@ -65,6 +42,30 @@ export function createBlogRoutes(): { publicRouter: Router; adminRouter: Router 
 
   adminRouter.delete('/categories/:id', (req, res, next) =>
     blogController.deleteCategory(req, res, next)
+  );
+
+  adminRouter.get('/tags', (req, res, next) =>
+    blogController.getTags(req, res, next)
+  );
+
+  adminRouter.get('/', (req, res, next) =>
+    blogController.listAllBlogs(req, res, next)
+  );
+
+  adminRouter.post('/', (req, res, next) =>
+    blogController.createBlog(req, res, next)
+  );
+
+  adminRouter.get('/:id', (req, res, next) =>
+    blogController.getBlogById(req, res, next)
+  );
+
+  adminRouter.put('/:id', (req, res, next) =>
+    blogController.updateBlog(req, res, next)
+  );
+
+  adminRouter.delete('/:id', (req, res, next) =>
+    blogController.deleteBlog(req, res, next)
   );
 
   return { publicRouter, adminRouter };

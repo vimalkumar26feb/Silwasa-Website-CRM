@@ -1,17 +1,18 @@
 import { settingsRepository } from '../repositories/settings.repository.js';
 import { userRepository } from '../repositories/user.repository.js';
-import { DEFAULT_THEME, DEFAULT_BRANDING } from '@silwasa/shared';
-import { ThemeSettings, GeneralSettings } from '@silwasa/types';
+import { DEFAULT_THEME, DEFAULT_BRANDING, DEFAULT_ANIMATION } from '@silwasa/shared';
+import { ThemeSettings, GeneralSettings, AnimationSettings } from '@silwasa/types';
 import { createEmailProviderFromSettings, EmailPayload } from '../integrations/email/index.js';
 
 export class SettingsService {
   async getPublicSettings() {
-    const [theme, branding, seo, popupsList, singlePopup] = await Promise.all([
+    const [theme, branding, seo, popupsList, singlePopup, animation] = await Promise.all([
       settingsRepository.getSetting<ThemeSettings>('theme'),
       settingsRepository.getSetting<GeneralSettings>('branding'),
       settingsRepository.getSetting<any>('seo'),
       settingsRepository.getSetting<any[]>('popups_list'),
       settingsRepository.getSetting<any>('popup'),
+      settingsRepository.getSetting<AnimationSettings>('animation'),
     ]);
 
     const resolvedPopups =
@@ -42,6 +43,7 @@ export class SettingsService {
       theme: theme || DEFAULT_THEME,
       branding: branding || DEFAULT_BRANDING,
       general: branding || DEFAULT_BRANDING,
+      animation: animation || DEFAULT_ANIMATION,
       seo: seo || {
         metaTitle: 'Silwasa IT Solutions | AI-Powered Web, Mobile & Enterprise Software',
         metaDescription: 'Silwasa IT Solutions engineers high-performance web platforms and AI systems.',
@@ -52,6 +54,23 @@ export class SettingsService {
       popup: activePopup,
       popups: resolvedPopups,
     };
+  }
+
+  async getAnimationSettings(): Promise<AnimationSettings> {
+    const anim = await settingsRepository.getSetting<AnimationSettings>('animation');
+    return anim || (DEFAULT_ANIMATION as unknown as AnimationSettings);
+  }
+
+  async updateAnimationSettings(data: AnimationSettings, userId: string, userName: string) {
+    await settingsRepository.setSetting('animation', data);
+    await userRepository.logActivity({
+      userId,
+      userName,
+      action: 'UPDATE_ANIMATIONS',
+      module: 'SETTINGS',
+      details: { preset: data.preset, enabled: data.enabled },
+    });
+    return data;
   }
 
   async getThemeSettings(): Promise<ThemeSettings> {

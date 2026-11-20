@@ -12,7 +12,9 @@ export interface PricingPlan {
   name: string;
   badge?: string;
   popular?: boolean;
+  regularPriceMonthly: number;
   priceMonthly: number;
+  regularPriceAnnual: number;
   priceAnnual: number;
   currency: string;
   description: string;
@@ -37,8 +39,10 @@ const DEFAULT_PLANS: PricingPlan[] = [
     id: 'starter',
     name: 'Growth Foundation',
     badge: 'Fast Launch',
+    regularPriceMonthly: 1499,
     priceMonthly: 1299,
-    priceAnnual: 1099,
+    regularPriceAnnual: 17988,
+    priceAnnual: 12468, // ~1039/mo
     currency: '$',
     description: 'Perfect for ambitious startups seeking a high-converting, custom-engineered digital presence.',
     features: [
@@ -58,8 +62,10 @@ const DEFAULT_PLANS: PricingPlan[] = [
     name: 'Scale & Performance',
     badge: 'Most Popular',
     popular: true,
+    regularPriceMonthly: 2999,
     priceMonthly: 2499,
-    priceAnnual: 1999,
+    regularPriceAnnual: 35988,
+    priceAnnual: 23988, // ~1999/mo
     currency: '$',
     description: 'Full-stack enterprise solution with Generative Engine Optimization, dynamic portals, and multi-service workflows.',
     features: [
@@ -79,8 +85,10 @@ const DEFAULT_PLANS: PricingPlan[] = [
     id: 'enterprise',
     name: 'Custom Enterprise',
     badge: 'Custom Architecture',
+    regularPriceMonthly: 5999,
     priceMonthly: 4999,
-    priceAnnual: 4199,
+    regularPriceAnnual: 71988,
+    priceAnnual: 47988, // ~3999/mo
     currency: '$',
     description: 'Bespoke software systems, microservices, AI copilot workflows, and dedicated senior engineering teams.',
     features: [
@@ -107,16 +115,19 @@ export function PricingSection({ settings }: { settings: PricingSectionSettings 
 
   const [isAnnual, setIsAnnual] = useState(true);
   const [plansList, setPlansList] = useState<PricingPlan[]>(settings?.plans || []);
+  const [isLoading, setIsLoading] = useState(!settings?.plans || settings.plans.length === 0);
 
   useEffect(() => {
     if (settings?.plans && settings.plans.length > 0) {
       setPlansList(settings.plans);
+      setIsLoading(false);
       return;
     }
 
     let isMounted = true;
     async function fetchDynamicPricing() {
       try {
+        setIsLoading(true);
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
         const queryParam = targetServiceId && targetServiceId !== 'all' ? `?serviceId=${targetServiceId}` : '';
         const res = await fetch(`${apiUrl}/pricing${queryParam}`);
@@ -125,17 +136,28 @@ export function PricingSection({ settings }: { settings: PricingSectionSettings 
           const data = await res.json();
           if (isMounted && data.success && Array.isArray(data.data) && data.data.length > 0) {
             const mapped: PricingPlan[] = data.data.map((pkg: any) => {
-              const regPrice = Number(pkg.regularPrice);
-              const effPrice = pkg.effectivePrice ? Number(pkg.effectivePrice) : regPrice;
-              const annualPrice = Math.round(effPrice * (1 - discountPercent / 100));
+              const regPrice = Number(pkg.regularPrice) || 0;
+              const salePrice = pkg.salePrice ? Number(pkg.salePrice) : null;
+              const effPrice = pkg.effectivePrice ? Number(pkg.effectivePrice) : (salePrice && salePrice > 0 ? salePrice : regPrice);
+
+              // Monthly rates:
+              const regularPriceMonthly = regPrice;
+              const priceMonthly = effPrice;
+
+              // Annual rates with discount:
+              const annualMonthlyRate = Math.round(effPrice * (1 - discountPercent / 100));
+              const regularPriceAnnual = Math.round(regPrice * 12);
+              const priceAnnual = Math.round(annualMonthlyRate * 12);
 
               return {
                 id: pkg.id,
                 name: pkg.name,
                 badge: pkg.isPopular ? 'Most Popular' : undefined,
                 popular: pkg.isPopular,
-                priceMonthly: effPrice,
-                priceAnnual: annualPrice,
+                regularPriceMonthly,
+                priceMonthly,
+                regularPriceAnnual,
+                priceAnnual,
                 currency: pkg.currency === 'USD' ? '$' : pkg.currency === 'INR' ? '₹' : pkg.currency,
                 description: pkg.shortDescription,
                 features: Array.isArray(pkg.features)
@@ -151,11 +173,14 @@ export function PricingSection({ settings }: { settings: PricingSectionSettings 
             });
 
             setPlansList(mapped);
+            setIsLoading(false);
             return;
           }
         }
       } catch {
         // Fallback to default
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
 
       if (isMounted && (!plansList || plansList.length === 0)) {
@@ -218,54 +243,102 @@ export function PricingSection({ settings }: { settings: PricingSectionSettings 
           </div>
         </div>
 
-        {/* Pricing Cards Grid */}
-        <div className={`grid grid-cols-1 ${effectivePlans.length === 2 ? 'md:grid-cols-2 max-w-4xl mx-auto' : effectivePlans.length >= 4 ? 'md:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-3'} gap-6`}>
-          {effectivePlans.map((plan) => {
-            const price = isAnnual ? plan.priceAnnual : plan.priceMonthly;
-
-            return (
+        {/* Pricing Cards Grid or Loading Skeletons */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
               <div
-                key={plan.id}
-                className={`relative p-8 rounded-2xl flex flex-col justify-between transition-all duration-300 ${
-                  plan.popular
-                    ? 'bg-[#1C1B1B] border-2 border-[#663399] shadow-2xl shadow-[#663399]/20 -translate-y-2'
-                    : 'bg-[#1C1B1B] border border-[#2A2B28] hover:border-white/20'
-                }`}
+                key={i}
+                className="p-8 rounded-2xl bg-[#1C1B1B] border border-[#2A2B28] animate-pulse space-y-6"
               >
-                {/* Popular Ribbon */}
-                {plan.badge && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                    <span className="px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-[#663399] text-white border border-[#D9F45F]/40 shadow-md">
-                      {plan.badge}
-                    </span>
-                  </div>
-                )}
+                <div className="h-6 w-1/3 bg-white/10 rounded-lg" />
+                <div className="h-4 w-3/4 bg-white/5 rounded-lg" />
+                <div className="h-12 w-1/2 bg-white/10 rounded-lg" />
+                <div className="space-y-3 pt-4 border-t border-[#2A2B28]/60">
+                  <div className="h-4 w-full bg-white/5 rounded-lg" />
+                  <div className="h-4 w-5/6 bg-white/5 rounded-lg" />
+                  <div className="h-4 w-4/6 bg-white/5 rounded-lg" />
+                  <div className="h-4 w-3/4 bg-white/5 rounded-lg" />
+                </div>
+                <div className="h-11 w-full bg-white/10 rounded-xl mt-6" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className={`grid grid-cols-1 ${effectivePlans.length === 2 ? 'md:grid-cols-2 max-w-4xl mx-auto' : effectivePlans.length >= 4 ? 'md:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-3'} gap-6`}>
+            {effectivePlans.map((plan) => {
+              // Rate calculations
+              const currentMonthlyRate = isAnnual
+                ? Math.round(plan.priceAnnual / 12)
+                : plan.priceMonthly;
+              const originalMonthlyRate = plan.regularPriceMonthly || plan.priceMonthly;
+              const hasMonthlyDiscount = originalMonthlyRate > plan.priceMonthly;
+              const hasAnnualDiscount = originalMonthlyRate > currentMonthlyRate;
+              const isDiscounted = isAnnual ? hasAnnualDiscount : hasMonthlyDiscount;
 
-                <div>
-                  <div className="mb-6">
-                    <h3 className="text-xl font-bold text-white mb-2">{plan.name}</h3>
-                    <p className="text-xs text-white/60 leading-relaxed min-h-[36px]">
-                      {plan.description}
-                    </p>
-                  </div>
+              const savePercent = isAnnual
+                ? Math.round(((originalMonthlyRate - currentMonthlyRate) / originalMonthlyRate) * 100)
+                : Math.round(((originalMonthlyRate - plan.priceMonthly) / originalMonthlyRate) * 100);
 
-                  {/* Pricing Display */}
-                  <div className="mb-6 pb-6 border-b border-[#2A2B28]/60">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-2xl font-bold text-[#D9F45F]">{plan.currency}</span>
-                      <span className="text-4xl sm:text-5xl font-black text-white tracking-tight">
-                        {price.toLocaleString()}
-                      </span>
-                      <span className="text-xs text-white/50 ml-1">
-                        / {isAnnual ? 'yr' : 'mo'}
+              return (
+                <div
+                  key={plan.id}
+                  className={`relative p-8 rounded-2xl flex flex-col justify-between transition-all duration-300 ${
+                    plan.popular
+                      ? 'bg-[#1C1B1B] border-2 border-[#663399] shadow-2xl shadow-[#663399]/20 -translate-y-2'
+                      : 'bg-[#1C1B1B] border border-[#2A2B28] hover:border-white/20'
+                  }`}
+                >
+                  {/* Popular Ribbon */}
+                  {plan.badge && (
+                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                      <span className="px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-[#663399] text-white border border-[#D9F45F]/40 shadow-md">
+                        {plan.badge}
                       </span>
                     </div>
-                    {isAnnual && (
-                      <p className="text-[11px] text-emerald-400 mt-1 font-semibold">
-                        Billed annually (Includes {discountPercent}% discount)
+                  )}
+
+                  <div>
+                    <div className="mb-6">
+                      <h3 className="text-xl font-bold text-white mb-2">{plan.name}</h3>
+                      <p className="text-xs text-white/60 leading-relaxed min-h-[36px]">
+                        {plan.description}
                       </p>
-                    )}
-                  </div>
+                    </div>
+
+                    {/* Pricing Display with Discount & Strikethrough */}
+                    <div className="mb-6 pb-6 border-b border-[#2A2B28]/60">
+                      {isDiscounted && (
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-sm font-semibold text-white/40 line-through">
+                            {plan.currency}{originalMonthlyRate.toLocaleString()}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                            Save {savePercent}%
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-2xl font-bold text-[#D9F45F]">{plan.currency}</span>
+                        <span className="text-4xl sm:text-5xl font-black text-white tracking-tight">
+                          {currentMonthlyRate.toLocaleString()}
+                        </span>
+                        <span className="text-xs text-white/50 ml-1">
+                          / mo
+                        </span>
+                      </div>
+
+                      {isAnnual ? (
+                        <p className="text-[11px] text-emerald-400 mt-2 font-medium">
+                          Billed annually at <span className="font-bold">{plan.currency}{plan.priceAnnual.toLocaleString()}</span> / yr
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-white/40 mt-2 font-medium">
+                          Standard monthly billing • Cancel anytime
+                        </p>
+                      )}
+                    </div>
 
                   {/* Features List or Matrix Table */}
                   {plan.tableFeatures && plan.tableFeatures.length > 0 ? (
@@ -339,6 +412,7 @@ export function PricingSection({ settings }: { settings: PricingSectionSettings 
             );
           })}
         </div>
+      )}
 
         {/* Enterprise Bottom SLA Note */}
         <div className="mt-16 p-6 rounded-2xl bg-[#1C1B1B] border border-[#2A2B28] flex flex-col md:flex-row items-center justify-between gap-4">

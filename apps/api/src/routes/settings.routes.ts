@@ -11,6 +11,8 @@ router.post('/newsletter/subscribe', settingsController.subscribeNewsletter);
 // Protected administrative settings routes
 router.get('/theme', authenticate, settingsController.getThemeSettings);
 router.put('/theme', authenticate, settingsController.updateThemeSettings);
+router.get('/animations', authenticate, settingsController.getAnimationSettings);
+router.put('/animations', authenticate, settingsController.updateAnimationSettings);
 router.get('/general', authenticate, settingsController.getGeneralSettings);
 router.put('/general', authenticate, settingsController.updateGeneralSettings);
 router.get('/email', authenticate, settingsController.getEmailSettings);

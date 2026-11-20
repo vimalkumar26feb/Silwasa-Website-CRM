@@ -234,6 +234,8 @@ export const GeneralSettingsSchema = z.object({
   defaultCurrency: z.string().default('INR'),
   logoUrl: z.string().optional(),
   faviconUrl: z.string().optional(),
+  homePageSlug: z.string().optional().nullable(),
+  homePageId: z.string().optional().nullable(),
   socialLinks: z.array(z.object({
     platform: z.string(),
     url: z.string().url()

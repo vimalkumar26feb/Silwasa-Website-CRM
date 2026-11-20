@@ -192,11 +192,12 @@ const DEFAULT_HOMEPAGE_SECTIONS: PageSection[] = [
   },
 ];
 
-async function getHomepageData(): Promise<PageSection[]> {
+async function getHomepageData(targetSlug: string = 'home'): Promise<PageSection[]> {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
   try {
-    const res = await fetch(`${apiUrl}/pages/home`, {
+    const slugToFetch = targetSlug && targetSlug.trim() ? targetSlug.trim() : 'home';
+    const res = await fetch(`${apiUrl}/pages/${slugToFetch}`, {
       next: { revalidate: 60 },
     });
 
@@ -210,14 +211,30 @@ async function getHomepageData(): Promise<PageSection[]> {
     // Backend offline / not reachable during build, use default sections
   }
 
+  // Fallback to default 'home' slug if custom slug had no sections
+  if (targetSlug !== 'home') {
+    try {
+      const resFallback = await fetch(`${apiUrl}/pages/home`, {
+        next: { revalidate: 60 },
+      });
+      if (resFallback.ok) {
+        const data = await resFallback.json();
+        if (data.success && data.data && data.data.sections?.length > 0) {
+          return data.data.sections;
+        }
+      }
+    } catch {
+      // Ignore
+    }
+  }
+
   return DEFAULT_HOMEPAGE_SECTIONS;
 }
 
 export default async function HomePage() {
-  const [sections, settings] = await Promise.all([
-    getHomepageData(),
-    getPublicSettingsServer(),
-  ]);
+  const settings = await getPublicSettingsServer();
+  const targetHomeSlug = settings?.general?.homePageSlug || 'home';
+  const sections = await getHomepageData(targetHomeSlug);
 
   const initialLogo = settings?.general?.logoUrl || null;
 
