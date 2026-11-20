@@ -4,7 +4,7 @@ import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { apiClient, ApiError } from '../../../../lib/api';
-import type { Page, PageSection, SectionType, SEOMetadata } from '@silwasa/types';
+import type { Page, PageSection, SectionType, SEOMetadata, Service } from '@silwasa/types';
 import { Button } from '../../../../components/ui/Button';
 import { Input } from '../../../../components/ui/Input';
 import { Badge } from '../../../../components/ui/Badge';
@@ -59,12 +59,16 @@ const AVAILABLE_SECTIONS: AvailableSectionOption[] = [
   },
   {
     type: 'services-grid',
-    label: 'Services Grid',
+    label: 'Services (Grid & Carousel)',
     category: 'Content',
     defaultSettings: {
       badge: 'OUR COMPREHENSIVE EXPERTISE',
       heading: 'Transformative Digital Services',
       subheading: 'We engineer tailor-made digital platforms designed to outpace the competition.',
+      layout: 'grid',
+      desktopColumns: 3,
+      mobileColumns: 1,
+      selectedCategory: 'All',
       viewAllUrl: '/services',
     },
   },
@@ -141,6 +145,20 @@ const AVAILABLE_SECTIONS: AvailableSectionOption[] = [
       badge: 'TRANSPARENT, VALUE-DRIVEN TIERS',
       heading: 'Flexible Investment For Serious Growth',
       subheading: 'No hidden licensing fees, no vendor lock-in. You own 100% of the code.',
+      selectedServiceId: 'all',
+    },
+  },
+  {
+    type: 'testimonials-carousel',
+    label: 'Client Testimonials & Reviews',
+    category: 'Showcase',
+    defaultSettings: {
+      badge: 'PROVEN CLIENT EXCELLENCE',
+      heading: 'Trusted by Market Leaders',
+      subheading: 'What founders, CTOs, and tech leaders say about shipping high-concurrency systems with Silwasa IT Solutions.',
+      layout: 'carousel',
+      desktopColumns: 3,
+      featuredOnly: false,
     },
   },
   {
@@ -304,6 +322,32 @@ export default function PageBuilderPage({ params }: { params: Promise<{ id: stri
   // Revisions modal
   const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
   const [revisions, setRevisions] = useState<any[]>([]);
+
+  // Dynamic services for selector dropdowns
+  const [availableServices, setAvailableServices] = useState<Service[]>([]);
+
+  useEffect(() => {
+    async function fetchServices() {
+      try {
+        const res = await apiClient<{ success: boolean; data: Service[] }>('/admin/services');
+        if (res.success && res.data) {
+          setAvailableServices(res.data);
+        }
+      } catch {
+        // Fallback / ignore
+      }
+    }
+    fetchServices();
+  }, []);
+
+  const serviceCategories = React.useMemo(() => {
+    const cats = new Set<string>();
+    availableServices.forEach((s) => {
+      if (s.category && s.category.trim()) cats.add(s.category.trim());
+    });
+    ['Web Development', 'Software Engineering', 'AI & Automation', 'Cloud & DevOps'].forEach((c) => cats.add(c));
+    return Array.from(cats);
+  }, [availableServices]);
 
   useEffect(() => {
     async function loadPage() {
@@ -897,6 +941,187 @@ export default function PageBuilderPage({ params }: { params: Promise<{ id: stri
                             onChange={(e) => handleUpdateSetting('contentHtml', e.target.value)}
                             className="w-full px-3 py-2 rounded-xl bg-[#151414] border border-[#2A2B28] text-white text-xs font-mono focus:outline-none focus:border-[#D9F45F]"
                           />
+                        </div>
+                      )}
+
+                      {/* Dynamic Services Configuration */}
+                      {(selectedSection.type === 'services-grid' || selectedSection.type === 'featured-services') && (
+                        <div className="space-y-4 pt-3 border-t border-[#2A2B28]">
+                          <div className="flex items-center gap-2 text-xs font-bold text-[#D9F45F] uppercase tracking-wider">
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span>Services Layout & Filters</span>
+                          </div>
+
+                          {/* Layout & Category */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-semibold text-white/70 mb-1">
+                                Display Layout
+                              </label>
+                              <select
+                                value={settings.layout || 'grid'}
+                                onChange={(e) => handleUpdateSetting('layout', e.target.value)}
+                                className="w-full px-3 py-2 rounded-xl bg-[#151414] border border-[#2A2B28] text-white text-xs focus:outline-none focus:border-[#D9F45F]"
+                              >
+                                <option value="grid">Grid Layout</option>
+                                <option value="carousel">Interactive Carousel</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-semibold text-white/70 mb-1">
+                                Service Category
+                              </label>
+                              <select
+                                value={settings.selectedCategory || 'All'}
+                                onChange={(e) => handleUpdateSetting('selectedCategory', e.target.value)}
+                                className="w-full px-3 py-2 rounded-xl bg-[#151414] border border-[#2A2B28] text-white text-xs focus:outline-none focus:border-[#D9F45F]"
+                              >
+                                <option value="All">All Categories (Show Everything)</option>
+                                {serviceCategories.map((cat) => (
+                                  <option key={cat} value={cat}>
+                                    {cat}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+
+                          {/* Column count */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-semibold text-white/70 mb-1">
+                                Desktop Columns
+                              </label>
+                              <select
+                                value={Number(settings.desktopColumns) || 3}
+                                onChange={(e) => handleUpdateSetting('desktopColumns', Number(e.target.value))}
+                                className="w-full px-3 py-2 rounded-xl bg-[#151414] border border-[#2A2B28] text-white text-xs focus:outline-none focus:border-[#D9F45F]"
+                              >
+                                <option value={1}>1 Column</option>
+                                <option value={2}>2 Columns</option>
+                                <option value={3}>3 Columns (Recommended)</option>
+                                <option value={4}>4 Columns</option>
+                                <option value={5}>5 Columns (Wide)</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-semibold text-white/70 mb-1">
+                                Mobile Columns
+                              </label>
+                              <select
+                                value={Number(settings.mobileColumns) || 1}
+                                onChange={(e) => handleUpdateSetting('mobileColumns', Number(e.target.value))}
+                                className="w-full px-3 py-2 rounded-xl bg-[#151414] border border-[#2A2B28] text-white text-xs focus:outline-none focus:border-[#D9F45F]"
+                              >
+                                <option value={1}>1 Column (Stacked)</option>
+                                <option value={2}>2 Columns (Compact)</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-semibold text-white/70 mb-1">
+                              "View All Services" Link URL
+                            </label>
+                            <Input
+                              type="text"
+                              value={String(settings.viewAllUrl || '/services')}
+                              onChange={(e) => handleUpdateSetting('viewAllUrl', e.target.value)}
+                              placeholder="/services"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Dynamic Pricing Configuration */}
+                      {selectedSection.type === 'pricing-plans' && (
+                        <div className="space-y-4 pt-3 border-t border-[#2A2B28]">
+                          <div className="flex items-center gap-2 text-xs font-bold text-[#D9F45F] uppercase tracking-wider">
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span>Pricing Package Filter</span>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-semibold text-white/70 mb-1">
+                              Filter by Associated Service
+                            </label>
+                            <select
+                              value={settings.selectedServiceId || 'all'}
+                              onChange={(e) => handleUpdateSetting('selectedServiceId', e.target.value)}
+                              className="w-full px-3 py-2 rounded-xl bg-[#151414] border border-[#2A2B28] text-white text-xs focus:outline-none focus:border-[#D9F45F]"
+                            >
+                              <option value="all">All Services (Global Packages)</option>
+                              {availableServices.map((srv) => (
+                                <option key={srv.id} value={srv.id}>
+                                  {srv.title} ({srv.category || 'General'})
+                                </option>
+                              ))}
+                            </select>
+                            <p className="mt-1 text-[11px] text-white/40">
+                              Choose a specific service to showcase only its custom pricing tiers, or choose "All Services" to display all global offerings.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Dynamic Testimonials Configuration */}
+                      {selectedSection.type === 'testimonials-carousel' && (
+                        <div className="space-y-4 pt-3 border-t border-[#2A2B28]">
+                          <div className="flex items-center gap-2 text-xs font-bold text-[#D9F45F] uppercase tracking-wider">
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span>Testimonials Settings</span>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-semibold text-white/70 mb-1">
+                                Layout Format
+                              </label>
+                              <select
+                                value={settings.layout || 'carousel'}
+                                onChange={(e) => handleUpdateSetting('layout', e.target.value)}
+                                className="w-full px-3 py-2 rounded-xl bg-[#151414] border border-[#2A2B28] text-white text-xs focus:outline-none focus:border-[#D9F45F]"
+                              >
+                                <option value="carousel">Interactive Carousel</option>
+                                <option value="grid">Grid View</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-semibold text-white/70 mb-1">
+                                Desktop Columns
+                              </label>
+                              <select
+                                value={Number(settings.desktopColumns) || 3}
+                                onChange={(e) => handleUpdateSetting('desktopColumns', Number(e.target.value))}
+                                className="w-full px-3 py-2 rounded-xl bg-[#151414] border border-[#2A2B28] text-white text-xs focus:outline-none focus:border-[#D9F45F]"
+                              >
+                                <option value={1}>1 Column</option>
+                                <option value={2}>2 Columns</option>
+                                <option value={3}>3 Columns (Recommended)</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between p-3 rounded-xl bg-[#151414] border border-[#2A2B28]">
+                            <div>
+                              <div className="text-xs font-semibold text-white">Featured Only</div>
+                              <div className="text-[11px] text-white/40">Show only testimonials flagged as featured</div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateSetting('featuredOnly', !settings.featuredOnly)}
+                              className="text-[#D9F45F] hover:opacity-80 transition"
+                            >
+                              {settings.featuredOnly ? (
+                                <ToggleRight className="w-6 h-6 text-[#D9F45F]" />
+                              ) : (
+                                <ToggleLeft className="w-6 h-6 text-white/40" />
+                              )}
+                            </button>
+                          </div>
                         </div>
                       )}
 

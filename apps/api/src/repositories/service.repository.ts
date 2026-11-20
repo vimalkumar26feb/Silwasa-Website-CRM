@@ -1,9 +1,53 @@
 import { prisma } from '../db/client.js';
 
+function formatServiceRecord(svc: any) {
+  if (!svc) return svc;
+  let category = 'General';
+  let customUrl = '';
+  let benefitsArray: string[] = [];
+
+  if (Array.isArray(svc.benefits)) {
+    benefitsArray = svc.benefits;
+  } else if (svc.benefits && typeof svc.benefits === 'object') {
+    category = svc.benefits.category || 'General';
+    customUrl = svc.benefits.customUrl || '';
+    benefitsArray = Array.isArray(svc.benefits.items) ? svc.benefits.items : [];
+  }
+
+  return {
+    ...svc,
+    category,
+    customUrl,
+    benefits: benefitsArray,
+  };
+}
+
+function formatPricingRecord(pkg: any) {
+  if (!pkg) return pkg;
+  let tableFeatures: any[] = [];
+  let featuresArray: any[] = [];
+
+  if (Array.isArray(pkg.features)) {
+    featuresArray = pkg.features;
+    if ((pkg.features as any).__tableFeatures) {
+      tableFeatures = (pkg.features as any).__tableFeatures;
+    }
+  } else if (pkg.features && typeof pkg.features === 'object') {
+    featuresArray = Array.isArray(pkg.features.items) ? pkg.features.items : [];
+    tableFeatures = Array.isArray(pkg.features.tableFeatures) ? pkg.features.tableFeatures : [];
+  }
+
+  return {
+    ...pkg,
+    features: featuresArray,
+    tableFeatures: tableFeatures.length > 0 ? tableFeatures : undefined,
+  };
+}
+
 export class ServiceRepository {
   // Services
   async findPublishedServices() {
-    return prisma.service.findMany({
+    const list = await prisma.service.findMany({
       where: { isPublished: true },
       orderBy: { order: 'asc' },
       include: {
@@ -14,10 +58,11 @@ export class ServiceRepository {
         seo: true,
       },
     });
+    return list.map(formatServiceRecord);
   }
 
   async findServiceBySlug(slug: string, onlyPublished = true) {
-    return prisma.service.findFirst({
+    const svc = await prisma.service.findFirst({
       where: {
         slug,
         ...(onlyPublished ? { isPublished: true } : {}),
@@ -30,36 +75,45 @@ export class ServiceRepository {
         seo: true,
       },
     });
+    return formatServiceRecord(svc);
   }
 
   async findAllServices() {
-    return prisma.service.findMany({
+    const list = await prisma.service.findMany({
       orderBy: { order: 'asc' },
       include: {
         pricingPackages: true,
         seo: true,
       },
     });
+    return list.map(formatServiceRecord);
   }
 
   async findServiceById(id: string) {
-    return prisma.service.findUnique({
+    const svc = await prisma.service.findUnique({
       where: { id },
       include: {
         pricingPackages: true,
         seo: true,
       },
     });
+    return formatServiceRecord(svc);
   }
 
   async createService(data: any) {
-    const { seo, ...rest } = data;
+    const { seo, category, customUrl, benefits, ...rest } = data;
 
-    return prisma.service.create({
+    const formattedBenefits = {
+      category: category || 'General',
+      customUrl: customUrl || '',
+      items: Array.isArray(benefits) ? benefits : [],
+    };
+
+    const created = await prisma.service.create({
       data: {
         ...rest,
         features: rest.features ?? [],
-        benefits: rest.benefits ?? [],
+        benefits: formattedBenefits as any,
         process: rest.process ?? [],
         faqs: rest.faqs ?? [],
         seo: seo
@@ -83,15 +137,24 @@ export class ServiceRepository {
         seo: true,
       },
     });
+
+    return formatServiceRecord(created);
   }
 
   async updateService(id: string, data: any) {
-    const { seo, ...rest } = data;
+    const { seo, category, customUrl, benefits, ...rest } = data;
 
-    return prisma.service.update({
+    const formattedBenefits = {
+      category: category || 'General',
+      customUrl: customUrl || '',
+      items: Array.isArray(benefits) ? benefits : [],
+    };
+
+    const updated = await prisma.service.update({
       where: { id },
       data: {
         ...rest,
+        benefits: formattedBenefits as any,
         ...(seo
           ? {
               seo: {
@@ -128,6 +191,8 @@ export class ServiceRepository {
         seo: true,
       },
     });
+
+    return formatServiceRecord(updated);
   }
 
   async deleteService(id: string) {
@@ -146,44 +211,71 @@ export class ServiceRepository {
       where.serviceId = opts.serviceId;
     }
 
-    return prisma.pricingPackage.findMany({
+    const list = await prisma.pricingPackage.findMany({
       where,
       orderBy: { order: 'asc' },
       include: {
         service: { select: { id: true, title: true, slug: true } },
       },
     });
+    return list.map(formatPricingRecord);
   }
 
   async findPricingPackageById(id: string) {
-    return prisma.pricingPackage.findUnique({
+    const pkg = await prisma.pricingPackage.findUnique({
       where: { id },
       include: {
         service: { select: { id: true, title: true, slug: true } },
       },
     });
+    return formatPricingRecord(pkg);
   }
 
   async createPricingPackage(data: any) {
-    return prisma.pricingPackage.create({
+    const { tableFeatures, ...rest } = data;
+    let featuresPayload = rest.features ?? [];
+    if (tableFeatures && Array.isArray(tableFeatures) && tableFeatures.length > 0) {
+      featuresPayload = {
+        items: featuresPayload,
+        tableFeatures,
+      } as any;
+    }
+
+    const created = await prisma.pricingPackage.create({
       data: {
-        ...data,
-        features: data.features ?? [],
+        ...rest,
+        features: featuresPayload,
       },
       include: {
         service: { select: { id: true, title: true, slug: true } },
       },
     });
+
+    return formatPricingRecord(created);
   }
 
   async updatePricingPackage(id: string, data: any) {
-    return prisma.pricingPackage.update({
+    const { tableFeatures, ...rest } = data;
+    let featuresPayload = rest.features ?? [];
+    if (tableFeatures && Array.isArray(tableFeatures) && tableFeatures.length > 0) {
+      featuresPayload = {
+        items: featuresPayload,
+        tableFeatures,
+      } as any;
+    }
+
+    const updated = await prisma.pricingPackage.update({
       where: { id },
-      data,
+      data: {
+        ...rest,
+        features: featuresPayload,
+      },
       include: {
         service: { select: { id: true, title: true, slug: true } },
       },
     });
+
+    return formatPricingRecord(updated);
   }
 
   async deletePricingPackage(id: string) {

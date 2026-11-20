@@ -35,6 +35,10 @@ export default function ServiceConfigPage({ params }: { params: Promise<{ id: st
 
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
+  const [category, setCategory] = useState('Web Development');
+  const [icon, setIcon] = useState('Globe');
+  const [featuredImageUrl, setFeaturedImageUrl] = useState('');
+  const [customUrl, setCustomUrl] = useState('');
   const [shortDesc, setShortDesc] = useState('');
   const [fullDesc, setFullDesc] = useState('');
   const [isPublished, setIsPublished] = useState(true);
@@ -67,6 +71,10 @@ export default function ServiceConfigPage({ params }: { params: Promise<{ id: st
           const s = res.data;
           setTitle(s.title);
           setSlug(s.slug);
+          if (s.category) setCategory(s.category);
+          if (s.icon) setIcon(s.icon);
+          if (s.featuredImageUrl) setFeaturedImageUrl(s.featuredImageUrl);
+          if (s.customUrl) setCustomUrl(s.customUrl);
           setShortDesc(s.shortDescription);
           setFullDesc(s.fullDescription);
           setIsPublished(s.isPublished);
@@ -125,10 +133,14 @@ export default function ServiceConfigPage({ params }: { params: Promise<{ id: st
       const targetPublished = publishedState !== undefined ? publishedState : isPublished;
 
       const payload = {
-        title,
-        slug,
-        shortDescription: shortDesc,
-        fullDescription: fullDesc,
+        title: title.trim(),
+        slug: slug.trim(),
+        category: category.trim() || 'General',
+        icon: icon.trim(),
+        featuredImageUrl: featuredImageUrl.trim() || null,
+        customUrl: customUrl.trim() || null,
+        shortDescription: shortDesc.trim(),
+        fullDescription: fullDesc.trim(),
         isPublished: targetPublished,
         features,
         benefits,
@@ -332,7 +344,102 @@ export default function ServiceConfigPage({ params }: { params: Promise<{ id: st
                     type="text"
                     value={slug}
                     onChange={(e) => setSlug(slugify(e.target.value))}
+                    className="font-mono text-xs"
                   />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-white/70 mb-1">
+                      Service Category *
+                    </label>
+                    <input
+                      type="text"
+                      list="category-options"
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      placeholder="e.g. Web Development"
+                      className="w-full px-3 py-2 rounded-xl bg-[#151414] border border-[#2A2B28] text-white text-xs focus:outline-none focus:border-[#D9F45F]"
+                    />
+                    <datalist id="category-options">
+                      <option value="Web Development" />
+                      <option value="Software Engineering" />
+                      <option value="AI & Automation" />
+                      <option value="E-Commerce" />
+                      <option value="Digital Marketing" />
+                      <option value="Mobile Apps" />
+                      <option value="Cloud & DevOps" />
+                    </datalist>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-white/70 mb-1">
+                      Display Icon
+                    </label>
+                    <select
+                      value={icon}
+                      onChange={(e) => setIcon(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-[#151414] border border-[#2A2B28] text-white text-xs focus:outline-none focus:border-[#D9F45F]"
+                    >
+                      <option value="Globe">Globe (Web / Platform)</option>
+                      <option value="Code2">Code2 (Software / Engineering)</option>
+                      <option value="Sparkles">Sparkles (AI & Innovation)</option>
+                      <option value="ShoppingCart">ShoppingCart (E-Commerce)</option>
+                      <option value="Search">Search (SEO & Marketing)</option>
+                      <option value="Smartphone">Smartphone (Mobile Apps)</option>
+                      <option value="Cpu">Cpu (Deep Tech & Hardware)</option>
+                      <option value="Database">Database (Data / Cloud)</option>
+                      <option value="Layers">Layers (Full-Stack Architecture)</option>
+                      <option value="ShieldCheck">ShieldCheck (Security & SLA)</option>
+                      <option value="Zap">Zap (Performance & Real-Time)</option>
+                      <option value="BarChart">BarChart (Analytics & Growth)</option>
+                      <option value="Server">Server (Infrastructure)</option>
+                      <option value="Monitor">Monitor (UI/UX Frontend)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Featured Image & Custom Target URL */}
+                <div className="space-y-4 p-4 rounded-xl bg-[#151414] border border-[#2A2B28]">
+                  <div>
+                    <label className="block text-xs font-semibold text-white/70 mb-1 flex items-center justify-between">
+                      <span>Card Featured Image URL</span>
+                      <span className="text-[11px] text-zinc-500">Optional cover photo for service card</span>
+                    </label>
+                    <Input
+                      type="text"
+                      value={featuredImageUrl}
+                      onChange={(e) => setFeaturedImageUrl(e.target.value)}
+                      placeholder="https://images.unsplash.com/photo-..."
+                      className="text-xs"
+                    />
+                    {featuredImageUrl && (
+                      <div className="mt-2 w-full h-32 rounded-lg overflow-hidden border border-[#2A2B28] relative bg-[#101010]">
+                        <img
+                          src={featuredImageUrl}
+                          alt="Cover preview"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-white/70 mb-1 flex items-center justify-between">
+                      <span>Custom Details Page URL</span>
+                      <span className="text-[11px] text-[#D9F45F]">Leave empty to use default /services/[slug]</span>
+                    </label>
+                    <Input
+                      type="text"
+                      value={customUrl}
+                      onChange={(e) => setCustomUrl(e.target.value)}
+                      placeholder="e.g. /custom-service-page or /landing-page"
+                      className="font-mono text-xs"
+                    />
+                    <p className="text-[11px] text-zinc-500 mt-1">
+                      If you design a custom landing page for this service in the Page Builder, enter its slug here. When users click this service card anywhere on the website, they will be navigated to this page.
+                    </p>
+                  </div>
                 </div>
 
                 <div>

@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Check, Zap, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Check, X, Zap, ArrowRight, ShieldCheck, Tag, Table as TableIcon } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { calculateEffectivePrice, formatCurrency } from '@silwasa/shared';
+import type { PricingPackage } from '@silwasa/types';
 
 export interface PricingPlan {
   id: string;
@@ -14,7 +16,8 @@ export interface PricingPlan {
   priceAnnual: number;
   currency: string;
   description: string;
-  features: string[];
+  features: { id?: string; text: string; included: boolean }[];
+  tableFeatures?: { feature: string; spec: string; included: boolean }[];
   ctaText?: string;
   ctaUrl?: string;
 }
@@ -23,6 +26,8 @@ export interface PricingSectionSettings {
   badge?: string;
   heading?: string;
   subheading?: string;
+  selectedServiceId?: string;
+  serviceId?: string;
   plans?: PricingPlan[];
   annualDiscountPercent?: number;
 }
@@ -37,13 +42,13 @@ const DEFAULT_PLANS: PricingPlan[] = [
     currency: '$',
     description: 'Perfect for ambitious startups seeking a high-converting, custom-engineered digital presence.',
     features: [
-      'Custom Next.js 15 Web Platform',
-      'Up to 10 Dynamic Pages',
-      'Full Custom CMS Integration',
-      'Technical SEO & Core Web Vitals (< 1s)',
-      'Contact Forms & Lead Notifications',
-      'Google Analytics 4 & Tag Manager',
-      '30-Day Post-Launch SLA Support',
+      { text: 'Custom Next.js 15 Web Platform', included: true },
+      { text: 'Up to 10 Dynamic Pages', included: true },
+      { text: 'Full Custom CMS Integration', included: true },
+      { text: 'Technical SEO & Core Web Vitals (< 1s)', included: true },
+      { text: 'Contact Forms & Lead Notifications', included: true },
+      { text: 'Google Analytics 4 & Tag Manager', included: true },
+      { text: '30-Day Post-Launch SLA Support', included: true },
     ],
     ctaText: 'Choose Growth Plan',
     ctaUrl: '/contact?plan=growth-foundation',
@@ -58,14 +63,14 @@ const DEFAULT_PLANS: PricingPlan[] = [
     currency: '$',
     description: 'Full-stack enterprise solution with Generative Engine Optimization, dynamic portals, and multi-service workflows.',
     features: [
-      'Everything in Growth Foundation',
-      'Generative Engine Optimization (GEO)',
-      'Custom Role-Based Admin Dashboard',
-      'Blog & Resource Center CMS',
-      'Lead Qualification & CRM Connectors',
-      'Enterprise AWS / Cloudflare Edge CDN',
-      'Automated DB Backups & 99.99% Uptime',
-      '90-Day Priority Engineering SLA',
+      { text: 'Everything in Growth Foundation', included: true },
+      { text: 'Generative Engine Optimization (GEO)', included: true },
+      { text: 'Custom Role-Based Admin Dashboard', included: true },
+      { text: 'Blog & Resource Center CMS', included: true },
+      { text: 'Lead Qualification & CRM Connectors', included: true },
+      { text: 'Enterprise AWS / Cloudflare Edge CDN', included: true },
+      { text: 'Automated DB Backups & 99.99% Uptime', included: true },
+      { text: '90-Day Priority Engineering SLA', included: true },
     ],
     ctaText: 'Get Scale Architecture',
     ctaUrl: '/contact?plan=scale-performance',
@@ -79,14 +84,14 @@ const DEFAULT_PLANS: PricingPlan[] = [
     currency: '$',
     description: 'Bespoke software systems, microservices, AI copilot workflows, and dedicated senior engineering teams.',
     features: [
-      'Everything in Scale & Performance',
-      'Private AI Agent / RAG Pipeline',
-      'Microservices Architecture & API Gateway',
-      'SOC 2 / HIPAA Compliance Hardening',
-      'Custom Third-Party Integrations',
-      'Dedicated Tech Lead & Weekly Sprints',
-      '24/7 Guaranteed Response SLA',
-      'Continuous Penetration Testing',
+      { text: 'Everything in Scale & Performance', included: true },
+      { text: 'Private AI Agent / RAG Pipeline', included: true },
+      { text: 'Microservices Architecture & API Gateway', included: true },
+      { text: 'SOC 2 / HIPAA Compliance Hardening', included: true },
+      { text: 'Custom Third-Party Integrations', included: true },
+      { text: 'Dedicated Tech Lead & Weekly Sprints', included: true },
+      { text: '24/7 Guaranteed Response SLA', included: true },
+      { text: 'Continuous Penetration Testing', included: true },
     ],
     ctaText: 'Schedule Architecture Call',
     ctaUrl: '/contact?plan=custom-enterprise',
@@ -94,17 +99,84 @@ const DEFAULT_PLANS: PricingPlan[] = [
 ];
 
 export function PricingSection({ settings }: { settings: PricingSectionSettings }) {
-  const badge = settings.badge || 'TRANSPARENT, VALUE-DRIVEN TIERS';
-  const heading = settings.heading || 'Flexible Investment For Serious Growth';
-  const subheading = settings.subheading || 'No hidden licensing fees, no vendor lock-in. You own 100% of the source code, database, and intellectual property.';
-  const plans = settings.plans && settings.plans.length > 0 ? settings.plans : DEFAULT_PLANS;
-  const discountPercent = settings.annualDiscountPercent || 20;
+  const badge = settings?.badge || 'TRANSPARENT, VALUE-DRIVEN TIERS';
+  const heading = settings?.heading || 'Flexible Investment For Serious Growth';
+  const subheading = settings?.subheading || 'No hidden licensing fees, no vendor lock-in. You own 100% of the source code, database, and intellectual property.';
+  const targetServiceId = settings?.selectedServiceId || settings?.serviceId;
+  const discountPercent = settings?.annualDiscountPercent || 20;
 
   const [isAnnual, setIsAnnual] = useState(true);
+  const [plansList, setPlansList] = useState<PricingPlan[]>(settings?.plans || []);
+
+  useEffect(() => {
+    if (settings?.plans && settings.plans.length > 0) {
+      setPlansList(settings.plans);
+      return;
+    }
+
+    let isMounted = true;
+    async function fetchDynamicPricing() {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+        const queryParam = targetServiceId && targetServiceId !== 'all' ? `?serviceId=${targetServiceId}` : '';
+        const res = await fetch(`${apiUrl}/pricing${queryParam}`);
+
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && data.success && Array.isArray(data.data) && data.data.length > 0) {
+            const mapped: PricingPlan[] = data.data.map((pkg: any) => {
+              const regPrice = Number(pkg.regularPrice);
+              const effPrice = pkg.effectivePrice ? Number(pkg.effectivePrice) : regPrice;
+              const annualPrice = Math.round(effPrice * (1 - discountPercent / 100));
+
+              return {
+                id: pkg.id,
+                name: pkg.name,
+                badge: pkg.isPopular ? 'Most Popular' : undefined,
+                popular: pkg.isPopular,
+                priceMonthly: effPrice,
+                priceAnnual: annualPrice,
+                currency: pkg.currency === 'USD' ? '$' : pkg.currency === 'INR' ? '₹' : pkg.currency,
+                description: pkg.shortDescription,
+                features: Array.isArray(pkg.features)
+                  ? pkg.features.map((f: any) => ({
+                      text: typeof f === 'string' ? f : f.text,
+                      included: typeof f === 'string' ? true : f.included !== false,
+                    }))
+                  : [],
+                tableFeatures: pkg.tableFeatures,
+                ctaText: pkg.ctaLabel || 'Choose Plan',
+                ctaUrl: pkg.ctaUrl || '/contact',
+              };
+            });
+
+            setPlansList(mapped);
+            return;
+          }
+        }
+      } catch {
+        // Fallback to default
+      }
+
+      if (isMounted && (!plansList || plansList.length === 0)) {
+        setPlansList(DEFAULT_PLANS);
+      }
+    }
+
+    fetchDynamicPricing();
+    return () => {
+      isMounted = false;
+    };
+  }, [settings?.plans, targetServiceId, discountPercent]);
+
+  const effectivePlans = plansList && plansList.length > 0 ? plansList : DEFAULT_PLANS;
 
   return (
-    <section className="py-20 lg:py-28 bg-[#151414] relative border-t border-[#2A2B28]/60">
-      <div className="max-w-[1369px] mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="py-20 lg:py-28 bg-[#151414] relative border-t border-[#2A2B28]/60 overflow-hidden">
+      {/* Background glow effects */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#663399]/10 rounded-full blur-[160px] pointer-events-none" />
+
+      <div className="max-w-[1369px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-12 space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1C1B1B] border border-[#2A2B28]">
@@ -120,119 +192,172 @@ export function PricingSection({ settings }: { settings: PricingSectionSettings 
             {subheading}
           </p>
 
-          {/* Billing Toggle */}
-          <div className="pt-6 flex items-center justify-center gap-4">
-            <span className={`text-sm font-semibold ${!isAnnual ? 'text-white' : 'text-white/60'}`}>
-              Monthly
+          {/* Billing Interval Toggle */}
+          <div className="pt-4 flex items-center justify-center gap-3">
+            <span className={`text-xs sm:text-sm font-semibold transition ${!isAnnual ? 'text-white' : 'text-white/50'}`}>
+              Monthly Billing
             </span>
             <button
               onClick={() => setIsAnnual(!isAnnual)}
-              className="w-14 h-8 rounded-full bg-[#1C1B1B] border border-[#2A2B28] p-1 flex items-center transition-colors relative"
-              aria-label="Toggle annual or monthly pricing"
+              className="w-14 h-8 rounded-full bg-[#1C1B1B] border border-[#2A2B28] p-1 flex items-center transition relative"
             >
               <div
-                className={`w-6 h-6 rounded-full bg-[#D9F45F] transition-transform ${
-                  isAnnual ? 'translate-x-6' : 'translate-x-0'
+                className={`w-6 h-6 rounded-full bg-[#663399] transition-transform ${
+                  isAnnual ? 'translate-x-6 bg-[#D9F45F]' : 'translate-x-0'
                 }`}
               />
             </button>
-            <div className="flex items-center gap-2">
-              <span className={`text-sm font-semibold ${isAnnual ? 'text-white' : 'text-white/60'}`}>
-                Annual Billing
+            <div className="flex items-center gap-1.5">
+              <span className={`text-xs sm:text-sm font-semibold transition ${isAnnual ? 'text-white' : 'text-white/50'}`}>
+                Annual Commitment
               </span>
-              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#D9F45F]/15 text-[#D9F45F] border border-[#D9F45F]/30">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#D9F45F]/15 text-[#D9F45F] border border-[#D9F45F]/30">
                 Save {discountPercent}%
               </span>
             </div>
           </div>
         </div>
 
-        {/* Pricing Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
-          {plans.map((plan) => {
+        {/* Pricing Cards Grid */}
+        <div className={`grid grid-cols-1 ${effectivePlans.length === 2 ? 'md:grid-cols-2 max-w-4xl mx-auto' : effectivePlans.length >= 4 ? 'md:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-3'} gap-6`}>
+          {effectivePlans.map((plan) => {
             const price = isAnnual ? plan.priceAnnual : plan.priceMonthly;
 
             return (
               <div
                 key={plan.id}
-                className={`relative p-8 sm:p-10 rounded-3xl flex flex-col justify-between transition-all duration-300 ${
+                className={`relative p-8 rounded-2xl flex flex-col justify-between transition-all duration-300 ${
                   plan.popular
-                    ? 'bg-[#1C1B1B] border-2 border-[#D9F45F] shadow-2xl shadow-[#D9F45F]/10 lg:-translate-y-2'
-                    : 'bg-[#1C1B1B] border border-[#2A2B28] hover:border-[#663399]/60'
+                    ? 'bg-[#1C1B1B] border-2 border-[#663399] shadow-2xl shadow-[#663399]/20 -translate-y-2'
+                    : 'bg-[#1C1B1B] border border-[#2A2B28] hover:border-white/20'
                 }`}
               >
-                {plan.popular && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-[#D9F45F] text-[#151414] text-xs font-extrabold uppercase tracking-wider shadow-md">
-                    Most Popular Choice
+                {/* Popular Ribbon */}
+                {plan.badge && (
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                    <span className="px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-[#663399] text-white border border-[#D9F45F]/40 shadow-md">
+                      {plan.badge}
+                    </span>
                   </div>
                 )}
 
                 <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-2xl font-bold text-white">{plan.name}</h3>
-                    {plan.badge && !plan.popular && (
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#2A2B28] text-white/80">
-                        {plan.badge}
+                  <div className="mb-6">
+                    <h3 className="text-xl font-bold text-white mb-2">{plan.name}</h3>
+                    <p className="text-xs text-white/60 leading-relaxed min-h-[36px]">
+                      {plan.description}
+                    </p>
+                  </div>
+
+                  {/* Pricing Display */}
+                  <div className="mb-6 pb-6 border-b border-[#2A2B28]/60">
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-bold text-[#D9F45F]">{plan.currency}</span>
+                      <span className="text-4xl sm:text-5xl font-black text-white tracking-tight">
+                        {price.toLocaleString()}
                       </span>
+                      <span className="text-xs text-white/50 ml-1">
+                        / {isAnnual ? 'yr' : 'mo'}
+                      </span>
+                    </div>
+                    {isAnnual && (
+                      <p className="text-[11px] text-emerald-400 mt-1 font-semibold">
+                        Billed annually (Includes {discountPercent}% discount)
+                      </p>
                     )}
                   </div>
 
-                  <p className="text-sm text-white/70 leading-relaxed mb-6">
-                    {plan.description}
-                  </p>
-
-                  <div className="mb-8 pb-8 border-b border-[#2A2B28]">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-4xl sm:text-5xl font-extrabold text-white font-mono">
-                        {plan.currency}{price.toLocaleString()}
-                      </span>
-                      <span className="text-sm font-semibold text-white/60">
-                        / month
-                      </span>
-                    </div>
-                    <span className="text-xs text-white/50 mt-1 block">
-                      {isAnnual ? 'Billed annually' : 'Billed monthly'} • Zero setup fees
-                    </span>
-                  </div>
-
-                  {/* Checklist */}
-                  <div className="space-y-3.5 mb-8">
-                    <span className="text-xs font-bold uppercase tracking-wider text-white/50 block">
-                      What&apos;s Included:
-                    </span>
-                    {plan.features.map((feature, fIdx) => (
-                      <div key={fIdx} className="flex items-start gap-3">
-                        <div className="w-5 h-5 rounded-full bg-[#D9F45F]/10 border border-[#D9F45F]/30 flex items-center justify-center text-[#D9F45F] shrink-0 mt-0.5">
-                          <Check className="w-3.5 h-3.5" />
-                        </div>
-                        <span className="text-xs sm:text-sm text-white/90 font-medium">
-                          {feature}
-                        </span>
+                  {/* Features List or Matrix Table */}
+                  {plan.tableFeatures && plan.tableFeatures.length > 0 ? (
+                    <div className="mb-8 space-y-2">
+                      <div className="text-[11px] font-bold text-white/50 uppercase tracking-wider mb-2 flex items-center gap-1">
+                        <TableIcon className="w-3 h-3 text-[#D9F45F]" /> Package Specifications
                       </div>
-                    ))}
-                  </div>
+                      <div className="rounded-xl border border-[#2A2B28] divide-y divide-[#2A2B28]/60 overflow-hidden bg-[#151414]">
+                        {plan.tableFeatures.map((tf, i) => (
+                          <div key={i} className="p-2.5 flex items-center justify-between text-xs">
+                            <span className="text-white/80 font-medium">{tf.feature}</span>
+                            <div className="flex items-center gap-1.5 font-semibold">
+                              {tf.included ? (
+                                <span className="text-emerald-400 flex items-center gap-1">
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span className="text-[11px]">{tf.spec}</span>
+                                </span>
+                              ) : (
+                                <span className="text-zinc-500 flex items-center gap-1">
+                                  <X className="w-3.5 h-3.5" />
+                                  <span className="text-[11px]">{tf.spec || 'Excluded'}</span>
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 mb-8">
+                      <div className="text-[11px] font-bold text-white/50 uppercase tracking-wider mb-2">
+                        Included Features
+                      </div>
+                      {plan.features.map((feat, i) => (
+                        <div key={i} className="flex items-start gap-2.5 text-xs text-white/80">
+                          {feat.included !== false ? (
+                            <div className="w-4 h-4 rounded-full bg-[#D9F45F]/20 text-[#D9F45F] flex items-center justify-center shrink-0 mt-0.5">
+                              <Check className="w-2.5 h-2.5" />
+                            </div>
+                          ) : (
+                            <div className="w-4 h-4 rounded-full bg-zinc-800 text-zinc-500 flex items-center justify-center shrink-0 mt-0.5">
+                              <X className="w-2.5 h-2.5" />
+                            </div>
+                          )}
+                          <span className={feat.included !== false ? 'text-white/85' : 'text-zinc-500 line-through'}>
+                            {feat.text}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
+                {/* CTA */}
                 <div>
-                  <Link href={plan.ctaUrl || '/contact'} className="block w-full">
+                  <Link href={plan.ctaUrl || '/contact'} className="block">
                     <Button
                       variant={plan.popular ? 'primary' : 'outline'}
-                      size="lg"
-                      className="w-full rounded-full"
+                      className={`w-full rounded-xl py-3 text-sm font-bold justify-center ${
+                        plan.popular
+                          ? 'bg-[#663399] hover:bg-[#52297A] text-white shadow-lg shadow-[#663399]/30'
+                          : 'border-[#2A2B28] text-white hover:bg-white/5'
+                      }`}
                     >
-                      {plan.ctaText || 'Get Started'}
+                      {plan.ctaText || 'Choose Plan'}
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                   </Link>
-
-                  <div className="mt-4 flex items-center justify-center gap-1.5 text-xs text-white/50">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Includes 100% Code Ownership</span>
-                  </div>
                 </div>
               </div>
             );
           })}
+        </div>
+
+        {/* Enterprise Bottom SLA Note */}
+        <div className="mt-16 p-6 rounded-2xl bg-[#1C1B1B] border border-[#2A2B28] flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#663399]/20 border border-[#663399]/30 flex items-center justify-center text-[#D9F45F] shrink-0">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-white">Need a Bespoke Retainer or Custom Enterprise Scope?</h4>
+              <p className="text-xs text-white/60">
+                We craft tailored milestone contracts, dedicated multi-engineer agile squads, and 24/7 mission-critical SLAs.
+              </p>
+            </div>
+          </div>
+          <Link href="/contact">
+            <Button variant="secondary" size="sm" className="rounded-full text-xs shrink-0">
+              Request Custom Proposal
+            </Button>
+          </Link>
         </div>
       </div>
     </section>

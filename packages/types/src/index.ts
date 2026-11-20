@@ -168,6 +168,8 @@ export interface Service {
   id: string;
   title: string;
   slug: string;
+  category?: string;
+  customUrl?: string | null;
   shortDescription: string;
   fullDescription: string;
   icon?: string;
@@ -196,6 +198,7 @@ export interface PricingPackage {
   discountEndDate?: string | null;
   currency: string;
   features: { id: string; text: string; included: boolean }[];
+  tableFeatures?: { feature: string; spec: string; included: boolean }[];
   isPopular: boolean;
   ctaLabel: string;
   ctaUrl: string;

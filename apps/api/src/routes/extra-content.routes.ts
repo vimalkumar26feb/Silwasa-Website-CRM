@@ -29,6 +29,7 @@ router.put('/admin/portfolio/:id', (req, res) => extraContentController.updatePo
 router.delete('/admin/portfolio/:id', (req, res) => extraContentController.deletePortfolio(req, res));
 
 // Admin Testimonials
+router.get('/admin/testimonials', (req, res) => extraContentController.getPublicTestimonials(req, res));
 router.post('/admin/testimonials', (req, res) => extraContentController.createTestimonial(req, res));
 router.put('/admin/testimonials/:id', (req, res) => extraContentController.updateTestimonial(req, res));
 router.delete('/admin/testimonials/:id', (req, res) => extraContentController.deleteTestimonial(req, res));

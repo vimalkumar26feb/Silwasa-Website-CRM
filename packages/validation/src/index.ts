@@ -128,10 +128,12 @@ export const UpdateTagSchema = CreateTagSchema.partial();
 export const CreateServiceSchema = z.object({
   title: z.string().min(2, 'Title is required'),
   slug: z.string().min(1, 'Slug is required').regex(/^[a-z0-9-]+$/, 'Slug must be lowercase alphanumeric with hyphens'),
+  category: z.string().optional().default('General'),
+  customUrl: z.string().optional().nullable(),
   shortDescription: z.string().min(10, 'Short description is required'),
   fullDescription: z.string().min(20, 'Full description is required'),
-  icon: z.string().optional(),
-  featuredImageUrl: z.string().url().optional().or(z.literal('')),
+  icon: z.string().optional().nullable(),
+  featuredImageUrl: z.string().url().optional().or(z.literal('')).nullable(),
   features: z.array(z.string()).default([]),
   benefits: z.array(z.string()).default([]),
   process: z.array(z.object({
@@ -164,6 +166,11 @@ export const CreatePricingPackageSchema = z.object({
     text: z.string(),
     included: z.boolean().default(true)
   })).min(1, 'At least one feature is required'),
+  tableFeatures: z.array(z.object({
+    feature: z.string(),
+    spec: z.string(),
+    included: z.boolean().default(true)
+  })).optional().nullable(),
   isPopular: z.boolean().default(false),
   ctaLabel: z.string().default('Choose Plan'),
   ctaUrl: z.string().default('/contact'),

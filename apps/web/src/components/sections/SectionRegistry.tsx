@@ -17,6 +17,7 @@ import { ContactSection } from './ContactSection';
 import { RichTextSection } from './RichTextSection';
 import { ImageCarouselSection } from './ImageCarouselSection';
 import { VideoCarouselSection } from './VideoCarouselSection';
+import { TestimonialsSection } from './TestimonialsSection';
 
 interface SectionRendererProps {
   section: PageSection;
@@ -63,6 +64,9 @@ export function renderSection(section: PageSection): React.ReactNode {
 
     case 'pricing-plans':
       return <PricingSection key={section.id} settings={settings} />;
+
+    case 'testimonials-carousel':
+      return <TestimonialsSection key={section.id} settings={settings} />;
 
     case 'faqs':
       return <FaqSection key={section.id} settings={settings} />;
