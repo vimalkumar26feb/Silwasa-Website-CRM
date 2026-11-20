@@ -100,9 +100,11 @@ export const DEFAULT_ANIMATION = {
   enabled: true,
   preset: 'luxury' as const,
   scrollReveal: 'fade-up' as const,
-  headingAnimation: 'fade-up' as const,
+  headingAnimation: 'word-reveal' as const,
+  paragraphAnimation: 'fade-up' as const,
   cardHoverEffect: 'lift-glow' as const,
   buttonEffect: 'shine-sweep' as const,
   speed: 'normal' as const,
   staggerChildren: true,
+  smoothScroll: true,
 };

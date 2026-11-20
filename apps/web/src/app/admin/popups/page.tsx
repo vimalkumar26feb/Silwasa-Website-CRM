@@ -710,7 +710,10 @@ export default function AdminPopupsPage() {
           {/* Modal Mockup Container */}
           <div className="rounded-3xl bg-gradient-to-br from-[#1C1B1B] via-[#241a2e] to-[#1C1B1B] border border-[#663399]/60 shadow-2xl relative overflow-hidden">
             {/* Close Button: anchored top-right with high z-index and backdrop blur */}
-            <span className="absolute top-3.5 right-3.5 z-50 w-7 h-7 rounded-full bg-black/80 hover:bg-black backdrop-blur-md border border-white/25 flex items-center justify-center text-white/90 text-xs shadow-xl cursor-default">
+            <span
+              style={{ position: 'absolute', top: '14px', right: '14px', left: 'auto', zIndex: 60 }}
+              className="w-7 h-7 rounded-full bg-black/80 hover:bg-black backdrop-blur-md border border-white/25 flex items-center justify-center text-white/90 text-xs shadow-xl cursor-default"
+            >
               ✕
             </span>
 

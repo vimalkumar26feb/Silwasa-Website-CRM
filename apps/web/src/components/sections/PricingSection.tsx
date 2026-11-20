@@ -306,38 +306,43 @@ export function PricingSection({ settings }: { settings: PricingSectionSettings 
                       </p>
                     </div>
 
-                    {/* Pricing Display with Discount & Strikethrough */}
-                    <div className="mb-6 pb-6 border-b border-[#2A2B28]/60">
-                      {isDiscounted && (
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-sm font-semibold text-white/40 line-through">
-                            {plan.currency}{originalMonthlyRate.toLocaleString()}
+                    {/* Balanced Luxury Pricing Box */}
+                    <div className="mb-6 p-4 rounded-2xl bg-[#151414] border border-[#2A2B28] flex items-center justify-between gap-3 shadow-inner">
+                      <div>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-xl sm:text-2xl font-bold text-[#D9F45F]">{plan.currency}</span>
+                          <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                            {currentMonthlyRate.toLocaleString()}
                           </span>
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                            Save {savePercent}%
-                          </span>
+                          <span className="text-xs text-white/50 ml-0.5">/ mo</span>
                         </div>
-                      )}
-
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-2xl font-bold text-[#D9F45F]">{plan.currency}</span>
-                        <span className="text-4xl sm:text-5xl font-black text-white tracking-tight">
-                          {currentMonthlyRate.toLocaleString()}
-                        </span>
-                        <span className="text-xs text-white/50 ml-1">
-                          / mo
-                        </span>
+                        <div className="text-[11px] font-medium text-white/40 mt-1">
+                          {isAnnual ? (
+                            <span className="text-emerald-400">
+                              Billed annually ({plan.currency}{plan.priceAnnual.toLocaleString()}/yr)
+                            </span>
+                          ) : (
+                            'Flexible monthly subscription'
+                          )}
+                        </div>
                       </div>
 
-                      {isAnnual ? (
-                        <p className="text-[11px] text-emerald-400 mt-2 font-medium">
-                          Billed annually at <span className="font-bold">{plan.currency}{plan.priceAnnual.toLocaleString()}</span> / yr
-                        </p>
-                      ) : (
-                        <p className="text-[11px] text-white/40 mt-2 font-medium">
-                          Standard monthly billing • Cancel anytime
-                        </p>
-                      )}
+                      <div className="text-right shrink-0">
+                        {isDiscounted ? (
+                          <div className="space-y-1">
+                            <div className="text-xs text-white/40 line-through font-mono">
+                              {plan.currency}{originalMonthlyRate.toLocaleString()}
+                            </div>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                              Save {savePercent}%
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/5 text-white/50 border border-white/10">
+                            STANDARD
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                   {/* Features List or Matrix Table */}

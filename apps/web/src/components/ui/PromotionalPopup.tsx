@@ -215,10 +215,12 @@ export function PromotionalPopup() {
   return (
     <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
       <div className="relative w-full max-w-lg rounded-3xl bg-gradient-to-br from-[#1C1B1B] via-[#241a2e] to-[#1C1B1B] border border-[#663399]/60 shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
-        {/* Close Button: anchored to top-right with high z-index and backdrop blur */}
+        {/* Close Button: anchored strictly to top-right inside popup */}
         <button
+          type="button"
           onClick={handleDismiss}
-          className="absolute top-3.5 right-3.5 z-50 w-8 h-8 rounded-full bg-black/75 hover:bg-black/95 backdrop-blur-md border border-white/20 flex items-center justify-center text-white/80 hover:text-white transition shadow-xl"
+          style={{ position: 'absolute', top: '14px', right: '14px', left: 'auto', zIndex: 60 }}
+          className="w-8 h-8 rounded-full bg-black/80 hover:bg-black border border-white/25 flex items-center justify-center text-white/80 hover:text-white transition shadow-xl cursor-pointer"
           aria-label="Close dialog"
         >
           <X className="w-4 h-4" />

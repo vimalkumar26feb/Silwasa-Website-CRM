@@ -203,15 +203,15 @@ export function ServicesSection({ settings }: { settings: ServicesSectionSetting
     ? (selectedCat !== 'All' ? effectiveServices.filter((s) => (s.category || 'General').toLowerCase() === selectedCat.toLowerCase()) : effectiveServices)
     : effectiveServices.filter((s) => (s.category || 'General').toLowerCase() === activeCategory.toLowerCase());
 
-  // Carousel calculations
-  const maxIndex = Math.max(0, filteredServices.length - (desktopCols > 1 ? desktopCols : 1));
+  // Carousel calculations with circular loop navigation
+  const maxIndex = Math.max(1, filteredServices.length - (desktopCols > 1 ? desktopCols : 1));
 
   const handlePrev = () => {
-    setCarouselIndex((prev) => Math.max(0, prev - 1));
+    setCarouselIndex((prev) => (prev <= 0 ? maxIndex : prev - 1));
   };
 
   const handleNext = () => {
-    setCarouselIndex((prev) => Math.min(maxIndex, prev + 1));
+    setCarouselIndex((prev) => (prev >= maxIndex ? 0 : prev + 1));
   };
 
   // Grid column class mapping
@@ -265,17 +265,17 @@ export function ServicesSection({ settings }: { settings: ServicesSectionSetting
             {layout === 'carousel' && filteredServices.length > 1 && (
               <div className="flex items-center gap-2 mr-2">
                 <button
+                  type="button"
                   onClick={handlePrev}
-                  disabled={carouselIndex === 0}
-                  className="w-10 h-10 rounded-full border border-[#2A2B28] bg-[#1C1B1B] text-white flex items-center justify-center hover:border-[#D9F45F] hover:text-[#D9F45F] transition disabled:opacity-30 disabled:hover:border-[#2A2B28] disabled:hover:text-white"
+                  className="w-10 h-10 rounded-full border border-[#2A2B28] bg-[#1C1B1B] text-white flex items-center justify-center hover:border-[#D9F45F] hover:text-[#D9F45F] transition active:scale-95 shadow-md cursor-pointer"
                   title="Previous Services"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
                 <button
+                  type="button"
                   onClick={handleNext}
-                  disabled={carouselIndex >= maxIndex}
-                  className="w-10 h-10 rounded-full border border-[#2A2B28] bg-[#1C1B1B] text-white flex items-center justify-center hover:border-[#D9F45F] hover:text-[#D9F45F] transition disabled:opacity-30 disabled:hover:border-[#2A2B28] disabled:hover:text-white"
+                  className="w-10 h-10 rounded-full border border-[#2A2B28] bg-[#1C1B1B] text-white flex items-center justify-center hover:border-[#D9F45F] hover:text-[#D9F45F] transition active:scale-95 shadow-md cursor-pointer"
                   title="Next Services"
                 >
                   <ChevronRight className="w-5 h-5" />

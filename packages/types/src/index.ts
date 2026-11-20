@@ -392,9 +392,11 @@ export interface AnimationSettings {
   enabled: boolean;
   preset: 'luxury' | 'dynamic' | 'minimal' | 'custom';
   scrollReveal: 'fade-up' | 'blur-in' | 'scale-up' | 'fade-in' | 'none';
-  headingAnimation: 'fade-up' | 'blur-glow' | 'slide-left' | 'none';
+  headingAnimation: 'word-reveal' | 'blur-glow' | 'fade-up' | 'slide-left' | 'none';
+  paragraphAnimation: 'word-reveal' | 'fade-up' | 'blur-in' | 'none';
   cardHoverEffect: 'lift-glow' | 'lime-border' | 'scale' | 'none';
   buttonEffect: 'shine-sweep' | 'pulse-glow' | 'lift' | 'none';
   speed: 'fast' | 'normal' | 'relaxed';
   staggerChildren: boolean;
+  smoothScroll: boolean;
 }

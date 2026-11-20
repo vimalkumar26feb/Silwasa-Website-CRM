@@ -24,6 +24,9 @@ import {
   ArrowRight,
   Flame,
   Feather,
+  Compass,
+  Type,
+  MousePointer,
 } from 'lucide-react';
 
 export default function AdminAnimationsPage() {
@@ -33,7 +36,7 @@ export default function AdminAnimationsPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Live preview replay trigger
+  // Live preview replay key
   const [previewKey, setPreviewKey] = useState(0);
 
   useEffect(() => {
@@ -45,7 +48,6 @@ export default function AdminAnimationsPage() {
           setSettings(res.data);
         }
       } catch {
-        // Fallback to default
         setSettings(DEFAULT_ANIMATION);
       } finally {
         setLoading(false);
@@ -60,11 +62,13 @@ export default function AdminAnimationsPage() {
         ...prev,
         preset: 'luxury',
         scrollReveal: 'fade-up',
-        headingAnimation: 'blur-glow',
+        headingAnimation: 'word-reveal',
+        paragraphAnimation: 'fade-up',
         cardHoverEffect: 'lift-glow',
         buttonEffect: 'shine-sweep',
         speed: 'normal',
         staggerChildren: true,
+        smoothScroll: true,
       }));
     } else if (preset === 'dynamic') {
       setSettings((prev) => ({
@@ -72,10 +76,12 @@ export default function AdminAnimationsPage() {
         preset: 'dynamic',
         scrollReveal: 'scale-up',
         headingAnimation: 'slide-left',
+        paragraphAnimation: 'word-reveal',
         cardHoverEffect: 'scale',
         buttonEffect: 'pulse-glow',
         speed: 'fast',
         staggerChildren: true,
+        smoothScroll: true,
       }));
     } else if (preset === 'minimal') {
       setSettings((prev) => ({
@@ -83,10 +89,12 @@ export default function AdminAnimationsPage() {
         preset: 'minimal',
         scrollReveal: 'fade-in',
         headingAnimation: 'fade-up',
+        paragraphAnimation: 'none',
         cardHoverEffect: 'lime-border',
         buttonEffect: 'lift',
         speed: 'relaxed',
         staggerChildren: false,
+        smoothScroll: false,
       }));
     }
     setPreviewKey((k) => k + 1);
@@ -124,6 +132,9 @@ export default function AdminAnimationsPage() {
     );
   }
 
+  // Preview word-reveal split
+  const sampleWords = 'Engineered For Measurable Business Superiority'.split(' ');
+
   return (
     <div className="space-y-6 max-w-5xl">
       {/* Top Header */}
@@ -134,11 +145,11 @@ export default function AdminAnimationsPage() {
               <Sparkles className="w-5 h-5" />
             </span>
             <h1 className="text-2xl font-bold text-white tracking-tight">
-              Website Animation Controls &amp; Motion Engine
+              Website Motion Engine &amp; Animation Controls
             </h1>
           </div>
           <p className="text-xs text-white/50 mt-1">
-            Configure global scroll animations, heading blur reveals, card hover elevations, and button micro-interactions
+            Configure Lenis smooth scrolling, word-by-word bottom reveals, card hover physics, and clean button shine
           </p>
         </div>
 
@@ -146,7 +157,7 @@ export default function AdminAnimationsPage() {
           variant="primary"
           onClick={handleSave}
           disabled={saving}
-          className="rounded-full shadow-lg shadow-[#663399]/30 text-xs px-5 py-2.5"
+          className="rounded-full text-xs px-5 py-2.5 font-bold"
         >
           {saving ? 'Saving...' : 'Save Animation Settings'}
         </Button>
@@ -156,7 +167,7 @@ export default function AdminAnimationsPage() {
       {saveSuccess && (
         <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-800/40 flex items-center gap-3 text-xs text-emerald-300 animate-in fade-in">
           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-          <span>Website motion engine settings updated and applied globally.</span>
+          <span>Motion settings saved and active across your entire public website.</span>
         </div>
       )}
 
@@ -167,41 +178,72 @@ export default function AdminAnimationsPage() {
         </div>
       )}
 
-      {/* Master Toggle Card */}
-      <Card className="border-[#2A2B28] bg-[#1C1B1B]">
-        <CardContent className="p-5 flex items-center justify-between">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className={`w-2.5 h-2.5 rounded-full ${settings.enabled ? 'bg-[#D9F45F] shadow-[0_0_8px_#D9F45F]' : 'bg-zinc-600'}`} />
-              <h3 className="text-sm font-bold text-white">Enable Global Motion &amp; Animations</h3>
+      {/* Master Toggles Card */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Master Motion Switch */}
+        <Card className="border-[#2A2B28] bg-[#1C1B1B]">
+          <CardContent className="p-5 flex items-center justify-between">
+            <div className="space-y-1 pr-4">
+              <div className="flex items-center gap-2">
+                <span className={`w-2.5 h-2.5 rounded-full ${settings.enabled ? 'bg-[#D9F45F] shadow-[0_0_8px_#D9F45F]' : 'bg-zinc-600'}`} />
+                <h3 className="text-sm font-bold text-white">Global Animations</h3>
+              </div>
+              <p className="text-xs text-white/50">
+                Master toggle for all scroll entrance animations, card lifts, and heading reveals.
+              </p>
             </div>
-            <p className="text-xs text-white/50">
-              When toggled off, all transition effects, scroll reveals, and entrance transforms are disabled for accessibility and reduced data.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              setSettings((prev) => ({ ...prev, enabled: !prev.enabled }));
-              setPreviewKey((k) => k + 1);
-            }}
-            className="text-[#D9F45F] hover:opacity-80 transition"
-          >
-            {settings.enabled ? (
-              <ToggleRight className="w-8 h-8 text-[#D9F45F]" />
-            ) : (
-              <ToggleLeft className="w-8 h-8 text-white/30" />
-            )}
-          </button>
-        </CardContent>
-      </Card>
+            <button
+              type="button"
+              onClick={() => {
+                setSettings((prev) => ({ ...prev, enabled: !prev.enabled }));
+                setPreviewKey((k) => k + 1);
+              }}
+              className="text-[#D9F45F] hover:opacity-80 transition shrink-0"
+            >
+              {settings.enabled ? (
+                <ToggleRight className="w-8 h-8 text-[#D9F45F]" />
+              ) : (
+                <ToggleLeft className="w-8 h-8 text-white/30" />
+              )}
+            </button>
+          </CardContent>
+        </Card>
 
-      {/* Animation Preset Selectors */}
+        {/* Lenis Smooth Scrolling Engine Switch */}
+        <Card className="border-[#2A2B28] bg-[#1C1B1B]">
+          <CardContent className="p-5 flex items-center justify-between">
+            <div className="space-y-1 pr-4">
+              <div className="flex items-center gap-2">
+                <Compass className="w-4 h-4 text-[#D9F45F]" />
+                <h3 className="text-sm font-bold text-white">Lenis Smooth Scrolling</h3>
+              </div>
+              <p className="text-xs text-white/50">
+                Inertial physics-based silky smooth scrolling engine for ultra-luxury navigation.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setSettings((prev) => ({ ...prev, smoothScroll: !prev.smoothScroll }));
+              }}
+              className="text-[#D9F45F] hover:opacity-80 transition shrink-0"
+            >
+              {settings.smoothScroll ? (
+                <ToggleRight className="w-8 h-8 text-[#D9F45F]" />
+              ) : (
+                <ToggleLeft className="w-8 h-8 text-white/30" />
+              )}
+            </button>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Style Presets Card */}
       <Card className="border-[#2A2B28] bg-[#1C1B1B]">
         <CardHeader>
-          <CardTitle>Curated Animation Style Presets</CardTitle>
+          <CardTitle>Curated Motion Presets</CardTitle>
           <CardDescription>
-            Choose a pre-calibrated luxury design system preset or customize each motion parameter below
+            One-click calibrated design system presets balancing aesthetics, performance, and smoothness
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -227,7 +269,7 @@ export default function AdminAnimationsPage() {
               </div>
               <h4 className="text-sm font-bold text-white mb-1">Luxury Smooth (Recommended)</h4>
               <p className="text-xs text-white/60 leading-relaxed">
-                Silky cubic-bezier curves, elegant translateY blur reveals, card float lifts with purple aura glow, and subtle button light shine.
+                Lenis inertial smooth scrolling, word reveal from bottom on headings, subtle card float lifts, and sheen sweep buttons.
               </p>
             </div>
 
@@ -252,7 +294,7 @@ export default function AdminAnimationsPage() {
               </div>
               <h4 className="text-sm font-bold text-white mb-1">Dynamic &amp; Punchy</h4>
               <p className="text-xs text-white/60 leading-relaxed">
-                High-energy spring curves, scale-up reveals, lively slide-in elements, and rapid micro-interactions for modern tech platforms.
+                Snappy scale-up reveals, energetic slide-in typography, and responsive micro-interactions for modern tech products.
               </p>
             </div>
 
@@ -277,50 +319,25 @@ export default function AdminAnimationsPage() {
               </div>
               <h4 className="text-sm font-bold text-white mb-1">Minimalist Subtle</h4>
               <p className="text-xs text-white/60 leading-relaxed">
-                Quiet opacity fades with minimal physical movement. Designed for enterprise rigor, executive readability, and calm performance.
+                Clean opacity fades without heavy physical motion. Designed for maximum accessibility, clarity, and executive rigor.
               </p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Fine-Tuning Controls */}
+      {/* Advanced Typography & Layout Motion Controls */}
       <Card className="border-[#2A2B28] bg-[#1C1B1B]">
         <CardHeader>
-          <CardTitle>Detailed Motion Parameters</CardTitle>
-          <CardDescription>Adjust specific behaviors for each UI layer across the website</CardDescription>
+          <CardTitle>Advanced Motion Customization</CardTitle>
+          <CardDescription>Configure word reveals, scroll thresholds, and component hover mechanics</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Scroll Reveal Animation */}
+            {/* Heading Entrance Animation */}
             <div>
-              <label className="block text-xs font-semibold text-white/80 mb-1.5">
-                Scroll Reveal Effect (Sections &amp; Cards)
-              </label>
-              <select
-                value={settings.scrollReveal}
-                onChange={(e) => {
-                  setSettings((prev) => ({
-                    ...prev,
-                    preset: 'custom',
-                    scrollReveal: e.target.value as any,
-                  }));
-                  setPreviewKey((k) => k + 1);
-                }}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#151414] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#D9F45F]"
-              >
-                <option value="fade-up">Fade &amp; Slide Up (Smooth elevation)</option>
-                <option value="blur-in">Blur &amp; Fade (Cinematic soft entrance)</option>
-                <option value="scale-up">Gentle Scale Up (Subtle zoom into focus)</option>
-                <option value="fade-in">Direct Fade In (Opacity only)</option>
-                <option value="none">None (Instant display)</option>
-              </select>
-            </div>
-
-            {/* Headings & Badges Entrance */}
-            <div>
-              <label className="block text-xs font-semibold text-white/80 mb-1.5">
-                Headings &amp; Badges Entrance
+              <label className="block text-xs font-semibold text-white/80 mb-1.5 flex items-center gap-1.5">
+                <Type className="w-3.5 h-3.5 text-[#D9F45F]" /> Headings Animation Mode
               </label>
               <select
                 value={settings.headingAnimation}
@@ -334,17 +351,42 @@ export default function AdminAnimationsPage() {
                 }}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-[#151414] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#D9F45F]"
               >
-                <option value="blur-glow">Blur-In with Soft Glow</option>
+                <option value="word-reveal">Word Reveal From Bottom (Staggered Mask — Recommended)</option>
+                <option value="blur-glow">Blur-In with Soft Radial Glow</option>
                 <option value="fade-up">Fade &amp; Slide Up</option>
                 <option value="slide-left">Slide In From Left</option>
+                <option value="none">None (Instant display)</option>
+              </select>
+            </div>
+
+            {/* Paragraph Animation */}
+            <div>
+              <label className="block text-xs font-semibold text-white/80 mb-1.5 flex items-center gap-1.5">
+                <Type className="w-3.5 h-3.5 text-[#D9F45F]" /> Paragraph &amp; Subtitle Animation
+              </label>
+              <select
+                value={settings.paragraphAnimation || 'fade-up'}
+                onChange={(e) => {
+                  setSettings((prev) => ({
+                    ...prev,
+                    preset: 'custom',
+                    paragraphAnimation: e.target.value as any,
+                  }));
+                  setPreviewKey((k) => k + 1);
+                }}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#151414] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#D9F45F]"
+              >
+                <option value="word-reveal">Word Reveal From Bottom (Staggered)</option>
+                <option value="fade-up">Smooth Fade Up (Recommended)</option>
+                <option value="blur-in">Soft Blur In</option>
                 <option value="none">None</option>
               </select>
             </div>
 
-            {/* Card Hover Interaction */}
+            {/* Card Hover Effect */}
             <div>
-              <label className="block text-xs font-semibold text-white/80 mb-1.5">
-                Card Hover Interaction
+              <label className="block text-xs font-semibold text-white/80 mb-1.5 flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5 text-[#D9F45F]" /> Card Hover Interaction
               </label>
               <select
                 value={settings.cardHoverEffect}
@@ -367,8 +409,8 @@ export default function AdminAnimationsPage() {
 
             {/* Button Micro-interaction */}
             <div>
-              <label className="block text-xs font-semibold text-white/80 mb-1.5">
-                Button Micro-interaction
+              <label className="block text-xs font-semibold text-white/80 mb-1.5 flex items-center gap-1.5">
+                <MousePointer className="w-3.5 h-3.5 text-[#D9F45F]" /> Button Hover Effect (No Box-Shadow)
               </label>
               <select
                 value={settings.buttonEffect}
@@ -382,17 +424,16 @@ export default function AdminAnimationsPage() {
                 }}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-[#151414] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#D9F45F]"
               >
-                <option value="shine-sweep">Lustrous Gradient Shine Sweep (Recommended)</option>
-                <option value="pulse-glow">Pulsing Glow Aura</option>
-                <option value="lift">Subtle Button Lift</option>
+                <option value="shine-sweep">Lustrous Sheen Light Sweep (Clean — No Box Shadow)</option>
+                <option value="lift">Subtle Button Micro-Lift (-2px)</option>
                 <option value="none">None</option>
               </select>
             </div>
 
-            {/* Transition Duration / Speed */}
+            {/* Motion Speed */}
             <div>
               <label className="block text-xs font-semibold text-white/80 mb-1.5">
-                Motion Speed / Duration
+                Motion Speed &amp; Duration
               </label>
               <select
                 value={settings.speed}
@@ -405,18 +446,18 @@ export default function AdminAnimationsPage() {
                 }}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-[#151414] text-white text-xs border border-[#2A2B28] focus:outline-none focus:border-[#D9F45F]"
               >
-                <option value="fast">Fast (400ms — Snappy &amp; rapid)</option>
-                <option value="normal">Normal (650ms — Balanced &amp; luxury)</option>
-                <option value="relaxed">Relaxed (900ms — Cinematic &amp; deliberate)</option>
+                <option value="fast">Fast (450ms — Snappy &amp; rapid)</option>
+                <option value="normal">Normal (700ms — Balanced &amp; luxury)</option>
+                <option value="relaxed">Relaxed (950ms — Cinematic &amp; deliberate)</option>
               </select>
             </div>
 
-            {/* Stagger Grid Items */}
-            <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#151414] border border-[#2A2B28] mt-4">
+            {/* Stagger Grid Items Toggle */}
+            <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#151414] border border-[#2A2B28] mt-3">
               <div>
-                <div className="text-xs font-semibold text-white">Stagger Grid Items</div>
+                <div className="text-xs font-semibold text-white">Stagger Grid Cards</div>
                 <div className="text-[11px] text-white/40">
-                  Sequentially cascade card entrance animations (e.g. 60ms delay per card)
+                  Sequentially cascade card entrance reveals (e.g. 50ms stagger)
                 </div>
               </div>
               <button
@@ -447,7 +488,7 @@ export default function AdminAnimationsPage() {
               <CardTitle>Interactive Live Preview</CardTitle>
             </div>
             <CardDescription>
-              Test heading reveals, card hover physics, and button shine sweeps in real-time
+              Test Word Reveal from bottom, clean button hover (no box-shadow), and card physics in real-time
             </CardDescription>
           </div>
           <Button
@@ -457,7 +498,7 @@ export default function AdminAnimationsPage() {
             className="text-xs h-8"
           >
             <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
-            Replay Motion
+            Replay Animations
           </Button>
         </CardHeader>
         <CardContent>
@@ -467,13 +508,13 @@ export default function AdminAnimationsPage() {
               settings.enabled ? '' : 'opacity-80'
             }`}
           >
-            {/* Background glow */}
+            {/* Ambient Background glow */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-[#663399]/15 rounded-full blur-[90px] pointer-events-none" />
 
             <div className="space-y-6 relative z-10">
               {/* Badge */}
               <div
-                className={`inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#151414] border border-[#2A2B28] ${
+                className={`inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#151414] border border-[#2A2B28] ${
                   settings.enabled ? 'animate-in fade-in slide-in-from-bottom-2 duration-500' : ''
                 }`}
               >
@@ -483,23 +524,42 @@ export default function AdminAnimationsPage() {
                 </span>
               </div>
 
-              {/* Heading */}
-              <h2
-                className={`text-2xl sm:text-3xl font-extrabold text-white tracking-tight ${
-                  settings.enabled && settings.headingAnimation === 'blur-glow'
-                    ? 'animate-in fade-in duration-700'
-                    : settings.enabled && settings.headingAnimation === 'slide-left'
-                    ? 'animate-in fade-in slide-in-from-left-4 duration-500'
-                    : settings.enabled
-                    ? 'animate-in fade-in slide-in-from-bottom-3 duration-600'
-                    : ''
-                }`}
-              >
-                Engineered For Measurable Business Superiority
-              </h2>
+              {/* Heading with Word Reveal from Bottom */}
+              {settings.enabled && settings.headingAnimation === 'word-reveal' ? (
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
+                  {sampleWords.map((word, idx) => (
+                    <span key={idx} className="word-mask">
+                      <span
+                        className="word-inner animate-in slide-in-from-bottom-[120%] fade-in fill-mode-forwards"
+                        style={{
+                          animationDuration: '0.75s',
+                          animationDelay: `${idx * 60}ms`,
+                          animationTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
+                        }}
+                      >
+                        {word}
+                      </span>
+                    </span>
+                  ))}
+                </h2>
+              ) : (
+                <h2
+                  className={`text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight ${
+                    settings.enabled && settings.headingAnimation === 'blur-glow'
+                      ? 'animate-in fade-in duration-700'
+                      : settings.enabled && settings.headingAnimation === 'slide-left'
+                      ? 'animate-in fade-in slide-in-from-left-4 duration-500'
+                      : settings.enabled
+                      ? 'animate-in fade-in slide-in-from-bottom-3 duration-600'
+                      : ''
+                  }`}
+                >
+                  Engineered For Measurable Business Superiority
+                </h2>
+              )}
 
               <p className="text-xs sm:text-sm text-white/60 max-w-xl">
-                Hover over the sample cards below to feel the calibrated elevation physics, or test the button shine sweep.
+                Hover over the sample cards below to feel the calibrated elevation physics, or test the button shine sweep (notice zero box shadow on button hover).
               </p>
 
               {/* Sample Cards Grid */}
@@ -545,7 +605,7 @@ export default function AdminAnimationsPage() {
                 </div>
               </div>
 
-              {/* Sample Button */}
+              {/* Sample Button (clean hover without box-shadow) */}
               <div className="pt-2">
                 <Button
                   variant="primary"
