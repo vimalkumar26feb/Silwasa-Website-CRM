@@ -245,11 +245,11 @@ export function PricingSection({ settings }: { settings: PricingSectionSettings 
 
         {/* Pricing Cards Grid or Loading Skeletons */}
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6">
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="p-8 rounded-2xl bg-[#1C1B1B] border border-[#2A2B28] animate-pulse space-y-6"
+                className="p-5 sm:p-6 lg:p-7 rounded-2xl bg-[#1C1B1B] border border-[#2A2B28] animate-pulse space-y-6"
               >
                 <div className="h-6 w-1/3 bg-white/10 rounded-lg" />
                 <div className="h-4 w-3/4 bg-white/5 rounded-lg" />
@@ -265,7 +265,17 @@ export function PricingSection({ settings }: { settings: PricingSectionSettings 
             ))}
           </div>
         ) : (
-          <div className={`grid grid-cols-1 ${effectivePlans.length === 2 ? 'md:grid-cols-2 max-w-4xl mx-auto' : effectivePlans.length >= 4 ? 'md:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-3'} gap-6`}>
+          <div
+            className={`grid grid-cols-1 ${
+              effectivePlans.length === 1
+                ? 'max-w-md mx-auto'
+                : effectivePlans.length === 2
+                ? 'md:grid-cols-2 max-w-3xl mx-auto'
+                : effectivePlans.length === 3
+                ? 'md:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto'
+                : 'md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+            } gap-5 lg:gap-6`}
+          >
             {effectivePlans.map((plan) => {
               // Rate calculations
               const currentMonthlyRate = isAnnual
@@ -283,9 +293,9 @@ export function PricingSection({ settings }: { settings: PricingSectionSettings 
               return (
                 <div
                   key={plan.id}
-                  className={`relative p-8 rounded-2xl flex flex-col justify-between transition-all duration-300 ${
+                  className={`relative p-5 sm:p-6 lg:p-7 rounded-2xl flex flex-col justify-between transition-all duration-300 w-full min-w-0 ${
                     plan.popular
-                      ? 'bg-[#1C1B1B] border-2 border-[#663399] shadow-2xl shadow-[#663399]/20 -translate-y-2'
+                      ? 'bg-[#1C1B1B] border-2 border-[#663399] shadow-2xl shadow-[#663399]/20 -translate-y-1.5'
                       : 'bg-[#1C1B1B] border border-[#2A2B28] hover:border-white/20'
                   }`}
                 >
@@ -299,7 +309,7 @@ export function PricingSection({ settings }: { settings: PricingSectionSettings 
                   )}
 
                   <div>
-                    <div className="mb-6">
+                    <div className="mb-5">
                       <h3 className="text-xl font-bold text-white mb-2">{plan.name}</h3>
                       <p className="text-xs text-white/60 leading-relaxed min-h-[36px]">
                         {plan.description}
@@ -307,14 +317,14 @@ export function PricingSection({ settings }: { settings: PricingSectionSettings 
                     </div>
 
                     {/* Balanced Luxury Pricing Box */}
-                    <div className="mb-6 p-4 rounded-2xl bg-[#151414] border border-[#2A2B28] flex items-center justify-between gap-3 shadow-inner">
-                      <div>
+                    <div className="mb-5 p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-[#151414] border border-[#2A2B28] flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 shadow-inner">
+                      <div className="min-w-0">
                         <div className="flex items-baseline gap-1">
                           <span className="text-xl sm:text-2xl font-bold text-[#D9F45F]">{plan.currency}</span>
-                          <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                          <span className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight">
                             {currentMonthlyRate.toLocaleString()}
                           </span>
-                          <span className="text-xs text-white/50 ml-0.5">/ mo</span>
+                          <span className="text-xs text-white/50 ml-0.5 whitespace-nowrap">/ mo</span>
                         </div>
                         <div className="text-[11px] font-medium text-white/40 mt-1">
                           {isAnnual ? (
@@ -333,69 +343,69 @@ export function PricingSection({ settings }: { settings: PricingSectionSettings 
                             <div className="text-xs text-white/40 line-through font-mono">
                               {plan.currency}{originalMonthlyRate.toLocaleString()}
                             </div>
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 whitespace-nowrap">
                               Save {savePercent}%
                             </span>
                           </div>
                         ) : (
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/5 text-white/50 border border-white/10">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wider bg-white/5 text-white/50 border border-white/10 whitespace-nowrap">
                             STANDARD
                           </span>
                         )}
                       </div>
                     </div>
 
-                  {/* Features List or Matrix Table */}
-                  {plan.tableFeatures && plan.tableFeatures.length > 0 ? (
-                    <div className="mb-8 space-y-2">
-                      <div className="text-[11px] font-bold text-white/50 uppercase tracking-wider mb-2 flex items-center gap-1">
-                        <TableIcon className="w-3 h-3 text-[#D9F45F]" /> Package Specifications
-                      </div>
-                      <div className="rounded-xl border border-[#2A2B28] divide-y divide-[#2A2B28]/60 overflow-hidden bg-[#151414]">
-                        {plan.tableFeatures.map((tf, i) => (
-                          <div key={i} className="p-2.5 flex items-center justify-between text-xs">
-                            <span className="text-white/80 font-medium">{tf.feature}</span>
-                            <div className="flex items-center gap-1.5 font-semibold">
-                              {tf.included ? (
-                                <span className="text-emerald-400 flex items-center gap-1">
-                                  <Check className="w-3.5 h-3.5" />
-                                  <span className="text-[11px]">{tf.spec}</span>
-                                </span>
-                              ) : (
-                                <span className="text-zinc-500 flex items-center gap-1">
-                                  <X className="w-3.5 h-3.5" />
-                                  <span className="text-[11px]">{tf.spec || 'Excluded'}</span>
-                                </span>
-                              )}
+                    {/* Features List or Matrix Table */}
+                    {plan.tableFeatures && plan.tableFeatures.length > 0 ? (
+                      <div className="mb-6 space-y-2.5">
+                        <div className="text-xs sm:text-[13px] font-bold text-white/70 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                          <TableIcon className="w-3.5 h-3.5 text-[#D9F45F]" /> Package Specifications
+                        </div>
+                        <div className="rounded-xl border border-[#2A2B28] divide-y divide-[#2A2B28]/60 overflow-hidden bg-[#151414]">
+                          {plan.tableFeatures.map((tf, i) => (
+                            <div key={i} className="p-3 flex items-center justify-between gap-2.5 text-sm sm:text-[14px]">
+                              <span className="text-white/90 font-medium">{tf.feature}</span>
+                              <div className="flex items-center gap-1.5 font-semibold shrink-0">
+                                {tf.included ? (
+                                  <span className="text-emerald-400 flex items-center gap-1 text-xs sm:text-[13px]">
+                                    <Check className="w-3.5 h-3.5" />
+                                    <span>{tf.spec}</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-zinc-500 flex items-center gap-1 text-xs sm:text-[13px]">
+                                    <X className="w-3.5 h-3.5" />
+                                    <span>{tf.spec || 'Excluded'}</span>
+                                  </span>
+                                )}
+                              </div>
                             </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3 mb-6">
+                        <div className="text-xs sm:text-[13px] font-bold text-white/70 uppercase tracking-wider mb-2.5">
+                          Included Features
+                        </div>
+                        {plan.features.map((feat, i) => (
+                          <div key={i} className="flex items-start gap-2.5 text-sm sm:text-[14.5px] leading-relaxed text-white/90">
+                            {feat.included !== false ? (
+                              <div className="w-4 h-4 rounded-full bg-[#D9F45F]/20 text-[#D9F45F] flex items-center justify-center shrink-0 mt-1">
+                                <Check className="w-3 h-3" />
+                              </div>
+                            ) : (
+                              <div className="w-4 h-4 rounded-full bg-zinc-800 text-zinc-500 flex items-center justify-center shrink-0 mt-1">
+                                <X className="w-3 h-3" />
+                              </div>
+                            )}
+                            <span className={feat.included !== false ? 'text-white/90 font-normal' : 'text-zinc-500 line-through'}>
+                              {feat.text}
+                            </span>
                           </div>
                         ))}
                       </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-3 mb-8">
-                      <div className="text-[11px] font-bold text-white/50 uppercase tracking-wider mb-2">
-                        Included Features
-                      </div>
-                      {plan.features.map((feat, i) => (
-                        <div key={i} className="flex items-start gap-2.5 text-xs text-white/80">
-                          {feat.included !== false ? (
-                            <div className="w-4 h-4 rounded-full bg-[#D9F45F]/20 text-[#D9F45F] flex items-center justify-center shrink-0 mt-0.5">
-                              <Check className="w-2.5 h-2.5" />
-                            </div>
-                          ) : (
-                            <div className="w-4 h-4 rounded-full bg-zinc-800 text-zinc-500 flex items-center justify-center shrink-0 mt-0.5">
-                              <X className="w-2.5 h-2.5" />
-                            </div>
-                          )}
-                          <span className={feat.included !== false ? 'text-white/85' : 'text-zinc-500 line-through'}>
-                            {feat.text}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
 
                 {/* CTA */}
                 <div>

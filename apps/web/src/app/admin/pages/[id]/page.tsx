@@ -956,7 +956,10 @@ export default function PageBuilderPage({ params }: { params: Promise<{ id: stri
 
                       {/* Dynamic Hero Configuration */}
                       {(selectedSection.type === 'hero' || selectedSection.type === 'hero-carousel') && (() => {
+                        const layoutMode = settings.layout || 'split-content';
                         const checklistItems: string[] = Array.isArray(settings.checklist) ? settings.checklist : [];
+                        const imageSlides: any[] = Array.isArray(settings.imageSlides) ? settings.imageSlides : [];
+                        const videoSlides: any[] = Array.isArray(settings.videoSlides) ? settings.videoSlides : [];
 
                         const handleAddChecklistItem = () => {
                           handleUpdateSetting('checklist', [...checklistItems, 'New Key Deliverable / Technical Benefit']);
@@ -972,108 +975,390 @@ export default function PageBuilderPage({ params }: { params: Promise<{ id: stri
                           handleUpdateSetting('checklist', checklistItems.filter((_, i) => i !== idx));
                         };
 
+                        // Image Slides handlers
+                        const handleAddImageSlide = () => {
+                          const newSlide = {
+                            id: `slide-${Date.now()}`,
+                            desktopImage: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=1600&auto=format&fit=crop',
+                            mobileImage: '',
+                            linkUrl: '',
+                            openInNewTab: false,
+                            altText: '',
+                          };
+                          handleUpdateSetting('imageSlides', [...imageSlides, newSlide]);
+                        };
+
+                        const handleUpdateImageSlide = (idx: number, field: string, val: any) => {
+                          const updated = [...imageSlides];
+                          updated[idx] = { ...updated[idx], [field]: val };
+                          handleUpdateSetting('imageSlides', updated);
+                        };
+
+                        const handleRemoveImageSlide = (idx: number) => {
+                          handleUpdateSetting('imageSlides', imageSlides.filter((_, i) => i !== idx));
+                        };
+
                         return (
                           <div className="space-y-4 pt-3 border-t border-[#2A2B28]">
                             <div className="flex items-center gap-2 text-xs font-bold text-[#D9F45F] uppercase tracking-wider">
                               <Sparkles className="w-3.5 h-3.5" />
-                              <span>Hero Layout &amp; Media Configuration</span>
+                              <span>Hero Layout &amp; Reusable Structure</span>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <label className="block text-xs font-semibold text-white/70 mb-1">
-                                  Hero Layout Mode
-                                </label>
-                                <select
-                                  value={settings.layout || 'split-content'}
-                                  onChange={(e) => handleUpdateSetting('layout', e.target.value)}
-                                  className="w-full px-3 py-2 rounded-xl bg-[#151414] border border-[#2A2B28] text-white text-xs focus:outline-none focus:border-[#D9F45F]"
-                                >
-                                  <option value="split-content">Split Content with Right Media</option>
-                                  <option value="fullwidth-banner">Full-Width Image Banner (with Overlay)</option>
-                                  <option value="fullwidth-video">Full-Width Video Player (with Overlay)</option>
-                                  <option value="content-only">Minimalist Content Only (Centered)</option>
-                                </select>
-                              </div>
-
-                              <div>
-                                <label className="block text-xs font-semibold text-white/70 mb-1">
-                                  Right Side Media Type
-                                </label>
-                                <select
-                                  value={settings.mediaType || 'badge-card'}
-                                  onChange={(e) => handleUpdateSetting('mediaType', e.target.value)}
-                                  className="w-full px-3 py-2 rounded-xl bg-[#151414] border border-[#2A2B28] text-white text-xs focus:outline-none focus:border-[#D9F45F]"
-                                >
-                                  <option value="badge-card">Silwasa Tech Badge Card</option>
-                                  <option value="image">Custom Showcase Image</option>
-                                  <option value="video">Cross-Browser HTML5 Video Player</option>
-                                </select>
-                              </div>
-                            </div>
-
-                            {/* Full Width Edge-to-Edge Toggle */}
-                            <div className="flex items-center justify-between p-3 rounded-xl bg-[#151414] border border-[#2A2B28]">
-                              <div>
-                                <div className="text-xs font-semibold text-white">Full Viewport Width (Zero Margin/Padding)</div>
-                                <div className="text-[11px] text-white/40">Stretch hero to 100% window size without container bounds</div>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => handleUpdateSetting('fullWidth', !settings.fullWidth)}
-                                className="text-[#D9F45F] hover:opacity-80 transition"
+                            {/* 1. Layout Mode Selector */}
+                            <div>
+                              <label className="block text-xs font-semibold text-white/70 mb-1">
+                                Hero Layout Mode
+                              </label>
+                              <select
+                                value={layoutMode}
+                                onChange={(e) => handleUpdateSetting('layout', e.target.value)}
+                                className="w-full px-3 py-2 rounded-xl bg-[#151414] border border-[#2A2B28] text-white text-xs focus:outline-none focus:border-[#D9F45F]"
                               >
-                                {settings.fullWidth ? (
-                                  <ToggleRight className="w-6 h-6 text-[#D9F45F]" />
-                                ) : (
-                                  <ToggleLeft className="w-6 h-6 text-white/40" />
-                                )}
-                              </button>
+                                <option value="split-content">Split Content with Right Media</option>
+                                <option value="fullwidth-banner">Full-Width Image Banner</option>
+                                <option value="fullwidth-video">Full-Width Video banner</option>
+                                <option value="content-only">Minimalist Content Only (Centered)</option>
+                              </select>
                             </div>
 
-                            {/* Image Media Controls */}
-                            {(settings.mediaType === 'image' || settings.layout === 'fullwidth-banner') && (
-                              <div className="p-3 rounded-xl bg-[#151414] border border-[#2A2B28] space-y-3">
-                                <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                                  <ImageIcon className="w-3.5 h-3.5 text-[#D9F45F]" /> Hero Banner Image
+                            {/* 2. FULL-WIDTH IMAGE BANNER CONFIGURATION */}
+                            {layoutMode === 'fullwidth-banner' && (
+                              <div className="p-3.5 rounded-xl bg-[#151414] border border-[#2A2B28] space-y-4">
+                                <div className="flex items-center justify-between pb-2 border-b border-[#2A2B28]">
+                                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                                    <ImageIcon className="w-3.5 h-3.5 text-[#D9F45F]" /> Hero Banner Image Settings
+                                  </div>
+                                  <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-[#D9F45F]/10 text-[#D9F45F] border border-[#D9F45F]/30">
+                                    Responsive Media
+                                  </span>
                                 </div>
-                                <div>
-                                  <label className="block text-xs text-white/70 mb-1">Image URL or Path</label>
-                                  <Input
-                                    type="text"
-                                    value={String(settings.imageUrl || '')}
-                                    onChange={(e) => handleUpdateSetting('imageUrl', e.target.value)}
-                                    placeholder="https://images.unsplash.com/..."
-                                  />
+
+                                {/* Full Viewport Width Toggle */}
+                                <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#1C1B1B] border border-[#2A2B28]">
+                                  <div>
+                                    <div className="text-xs font-semibold text-white">Full Viewport Width (Zero Margin/Padding)</div>
+                                    <div className="text-[10px] text-white/40">Stretch banner to edge-to-edge window width</div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateSetting('fullWidth', !settings.fullWidth)}
+                                    className="text-[#D9F45F] hover:opacity-80 transition"
+                                  >
+                                    {settings.fullWidth ? (
+                                      <ToggleRight className="w-6 h-6 text-[#D9F45F]" />
+                                    ) : (
+                                      <ToggleLeft className="w-6 h-6 text-white/40" />
+                                    )}
+                                  </button>
                                 </div>
+
+                                {/* Dark Contrast Overlay Toggle */}
+                                <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#1C1B1B] border border-[#2A2B28]">
+                                  <div>
+                                    <div className="text-xs font-semibold text-white">Dark Contrast Overlay</div>
+                                    <div className="text-[10px] text-white/40">Luxury gradient overlay for high text readability</div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateSetting('overlay', settings.overlay === false ? true : false)}
+                                    className="text-[#D9F45F] hover:opacity-80 transition"
+                                  >
+                                    {settings.overlay !== false ? (
+                                      <ToggleRight className="w-6 h-6 text-[#D9F45F]" />
+                                    ) : (
+                                      <ToggleLeft className="w-6 h-6 text-white/40" />
+                                    )}
+                                  </button>
+                                </div>
+
+                                {/* Carousel Mode Toggle */}
+                                <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#1C1B1B] border border-[#2A2B28]">
+                                  <div>
+                                    <div className="text-xs font-semibold text-white">Enable Multi-Image Carousel</div>
+                                    <div className="text-[10px] text-white/40">Add multiple sliding banners with individual links</div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateSetting('isCarousel', !settings.isCarousel)}
+                                    className="text-[#D9F45F] hover:opacity-80 transition"
+                                  >
+                                    {settings.isCarousel ? (
+                                      <ToggleRight className="w-6 h-6 text-[#D9F45F]" />
+                                    ) : (
+                                      <ToggleLeft className="w-6 h-6 text-white/40" />
+                                    )}
+                                  </button>
+                                </div>
+
+                                {/* SINGLE IMAGE BANNER MODE */}
+                                {!settings.isCarousel ? (
+                                  <div className="space-y-3 pt-1">
+                                    <div>
+                                      <label className="block text-xs text-white/70 mb-1">
+                                        Desktop Banner Image URL * (Shown on desktop)
+                                      </label>
+                                      <Input
+                                        type="text"
+                                        value={String(settings.desktopImageUrl || settings.imageUrl || '')}
+                                        onChange={(e) => {
+                                          handleUpdateSetting('desktopImageUrl', e.target.value);
+                                          handleUpdateSetting('imageUrl', e.target.value);
+                                        }}
+                                        placeholder="https://images.unsplash.com/... or /uploads/..."
+                                      />
+                                    </div>
+
+                                    <div>
+                                      <label className="block text-xs text-white/70 mb-1">
+                                        Mobile Banner Image URL (Optional - Fallback to desktop image on mobile)
+                                      </label>
+                                      <Input
+                                        type="text"
+                                        value={String(settings.mobileImageUrl || '')}
+                                        onChange={(e) => handleUpdateSetting('mobileImageUrl', e.target.value)}
+                                        placeholder="https://images.unsplash.com/... (if empty, uses desktop image)"
+                                      />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                      <div>
+                                        <label className="block text-xs text-white/70 mb-1">Banner Click Link (Optional)</label>
+                                        <Input
+                                          type="text"
+                                          value={String(settings.bannerLinkUrl || '')}
+                                          onChange={(e) => handleUpdateSetting('bannerLinkUrl', e.target.value)}
+                                          placeholder="/services or https://..."
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-xs text-white/70 mb-1">Image Alt Text</label>
+                                        <Input
+                                          type="text"
+                                          value={String(settings.imageAlt || '')}
+                                          onChange={(e) => handleUpdateSetting('imageAlt', e.target.value)}
+                                          placeholder="SEO Alt text"
+                                        />
+                                      </div>
+                                    </div>
+
+                                    <label className="flex items-center gap-2 text-xs text-white/70 cursor-pointer pt-1">
+                                      <input
+                                        type="checkbox"
+                                        checked={Boolean(settings.bannerLinkOpenInNewTab)}
+                                        onChange={(e) => handleUpdateSetting('bannerLinkOpenInNewTab', e.target.checked)}
+                                        className="rounded"
+                                      />
+                                      <span>Open link in new browser tab</span>
+                                    </label>
+                                  </div>
+                                ) : (
+                                  /* MULTI-IMAGE CAROUSEL MODE */
+                                  <div className="space-y-3 pt-1">
+                                    <div className="flex items-center justify-between">
+                                      <div className="text-xs font-semibold text-white">Carousel Slides ({imageSlides.length})</div>
+                                      <Button variant="ghost" size="sm" onClick={handleAddImageSlide} className="h-7 text-xs text-[#D9F45F]">
+                                        <Plus className="w-3 h-3 mr-1" /> Add Slide
+                                      </Button>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2 text-xs p-2 rounded-lg bg-[#1C1B1B] border border-[#2A2B28]">
+                                      <label className="flex items-center gap-2 text-white/70 cursor-pointer">
+                                        <input
+                                          type="checkbox"
+                                          checked={settings.carouselAutoplay !== false}
+                                          onChange={(e) => handleUpdateSetting('carouselAutoplay', e.target.checked)}
+                                          className="rounded"
+                                        />
+                                        <span>Autoplay Slides</span>
+                                      </label>
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="text-white/60">Interval:</span>
+                                        <input
+                                          type="number"
+                                          min={2}
+                                          max={30}
+                                          value={Number(settings.carouselInterval) || 5}
+                                          onChange={(e) => handleUpdateSetting('carouselInterval', Number(e.target.value))}
+                                          className="w-14 px-1.5 py-0.5 rounded bg-[#151414] border border-[#2A2B28] text-white text-xs"
+                                        />
+                                        <span className="text-white/40">sec</span>
+                                      </div>
+                                    </div>
+
+                                    <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1">
+                                      {imageSlides.map((slide, sIdx) => (
+                                        <div key={slide.id || sIdx} className="p-3 rounded-lg bg-[#1C1B1B] border border-[#2A2B28] space-y-2">
+                                          <div className="flex items-center justify-between">
+                                            <span className="text-xs font-mono text-[#D9F45F]">Slide #{sIdx + 1}</span>
+                                            <button
+                                              type="button"
+                                              onClick={() => handleRemoveImageSlide(sIdx)}
+                                              className="p-1 text-rose-400 hover:bg-rose-500/10 rounded transition"
+                                            >
+                                              <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                          </div>
+                                          <div>
+                                            <label className="block text-[11px] text-white/60 mb-0.5">Desktop Image URL *</label>
+                                            <Input
+                                              type="text"
+                                              value={String(slide.desktopImage || '')}
+                                              onChange={(e) => handleUpdateImageSlide(sIdx, 'desktopImage', e.target.value)}
+                                              placeholder="https://... desktop banner"
+                                              className="text-xs py-1"
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="block text-[11px] text-white/60 mb-0.5">Mobile Image URL (Fallback to desktop)</label>
+                                            <Input
+                                              type="text"
+                                              value={String(slide.mobileImage || '')}
+                                              onChange={(e) => handleUpdateImageSlide(sIdx, 'mobileImage', e.target.value)}
+                                              placeholder="https://... mobile banner (optional)"
+                                              className="text-xs py-1"
+                                            />
+                                          </div>
+                                          <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                              <label className="block text-[11px] text-white/60 mb-0.5">Target Link URL</label>
+                                              <Input
+                                                type="text"
+                                                value={String(slide.linkUrl || '')}
+                                                onChange={(e) => handleUpdateImageSlide(sIdx, 'linkUrl', e.target.value)}
+                                                placeholder="/services/..."
+                                                className="text-xs py-1"
+                                              />
+                                            </div>
+                                            <div className="flex items-end pb-1.5">
+                                              <label className="flex items-center gap-1.5 text-[11px] text-white/70 cursor-pointer">
+                                                <input
+                                                  type="checkbox"
+                                                  checked={Boolean(slide.openInNewTab)}
+                                                  onChange={(e) => handleUpdateImageSlide(sIdx, 'openInNewTab', e.target.checked)}
+                                                  className="rounded"
+                                                />
+                                                <span>New Tab</span>
+                                              </label>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )}
 
-                            {/* Video Media Controls */}
-                            {(settings.mediaType === 'video' || settings.layout === 'fullwidth-video') && (
-                              <div className="p-3 rounded-xl bg-[#151414] border border-[#2A2B28] space-y-3">
-                                <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                                  <Film className="w-3.5 h-3.5 text-[#D9F45F]" /> HTML5 Video Configuration (Cross-Browser)
+                            {/* 3. FULL-WIDTH VIDEO BANNER CONFIGURATION */}
+                            {layoutMode === 'fullwidth-video' && (
+                              <div className="p-3.5 rounded-xl bg-[#151414] border border-[#2A2B28] space-y-4">
+                                <div className="flex items-center justify-between pb-2 border-b border-[#2A2B28]">
+                                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                                    <Film className="w-3.5 h-3.5 text-[#D9F45F]" /> Hero Banner Video Settings
+                                  </div>
+                                  <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-[#D9F45F]/10 text-[#D9F45F] border border-[#D9F45F]/30">
+                                    Cross-Browser HTML5
+                                  </span>
                                 </div>
+
+                                {/* Full Viewport Width Toggle */}
+                                <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#1C1B1B] border border-[#2A2B28]">
+                                  <div>
+                                    <div className="text-xs font-semibold text-white">Full Viewport Width (Zero Margin/Padding)</div>
+                                    <div className="text-[10px] text-white/40">Stretch video player to edge-to-edge window width</div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateSetting('fullWidth', !settings.fullWidth)}
+                                    className="text-[#D9F45F] hover:opacity-80 transition"
+                                  >
+                                    {settings.fullWidth ? (
+                                      <ToggleRight className="w-6 h-6 text-[#D9F45F]" />
+                                    ) : (
+                                      <ToggleLeft className="w-6 h-6 text-white/40" />
+                                    )}
+                                  </button>
+                                </div>
+
+                                {/* Dark Contrast Overlay Toggle */}
+                                <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#1C1B1B] border border-[#2A2B28]">
+                                  <div>
+                                    <div className="text-xs font-semibold text-white">Dark Contrast Overlay</div>
+                                    <div className="text-[10px] text-white/40">Soft gradient overlay for text readability over video</div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateSetting('overlay', settings.overlay === false ? true : false)}
+                                    className="text-[#D9F45F] hover:opacity-80 transition"
+                                  >
+                                    {settings.overlay !== false ? (
+                                      <ToggleRight className="w-6 h-6 text-[#D9F45F]" />
+                                    ) : (
+                                      <ToggleLeft className="w-6 h-6 text-white/40" />
+                                    )}
+                                  </button>
+                                </div>
+
                                 <div>
-                                  <label className="block text-xs text-white/70 mb-1">MP4 / WebM Video URL *</label>
+                                  <label className="block text-xs text-white/70 mb-1">
+                                    Desktop Video URL * (MP4 / WebM for Desktop View)
+                                  </label>
                                   <Input
                                     type="text"
-                                    value={String(settings.videoUrl || '')}
-                                    onChange={(e) => handleUpdateSetting('videoUrl', e.target.value)}
+                                    value={String(settings.desktopVideoUrl || settings.videoUrl || '')}
+                                    onChange={(e) => {
+                                      handleUpdateSetting('desktopVideoUrl', e.target.value);
+                                      handleUpdateSetting('videoUrl', e.target.value);
+                                    }}
                                     placeholder="https://.../video.mp4"
                                   />
                                 </div>
+
                                 <div>
-                                  <label className="block text-xs text-white/70 mb-1">Video Poster / Thumbnail URL</label>
+                                  <label className="block text-xs text-white/70 mb-1">
+                                    Mobile Video URL (Optional - Fallback to desktop video on mobile)
+                                  </label>
                                   <Input
                                     type="text"
-                                    value={String(settings.videoPoster || '')}
-                                    onChange={(e) => handleUpdateSetting('videoPoster', e.target.value)}
-                                    placeholder="https://.../thumbnail.jpg"
+                                    value={String(settings.mobileVideoUrl || '')}
+                                    onChange={(e) => handleUpdateSetting('mobileVideoUrl', e.target.value)}
+                                    placeholder="https://.../mobile-video.mp4"
                                   />
                                 </div>
-                                <div className="grid grid-cols-2 gap-2 text-xs">
+
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="block text-xs text-white/70 mb-1">Desktop Video Poster Image</label>
+                                    <Input
+                                      type="text"
+                                      value={String(settings.videoPoster || '')}
+                                      onChange={(e) => handleUpdateSetting('videoPoster', e.target.value)}
+                                      placeholder="https://.../poster.jpg"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-white/70 mb-1">Mobile Poster Image</label>
+                                    <Input
+                                      type="text"
+                                      value={String(settings.mobileVideoPoster || '')}
+                                      onChange={(e) => handleUpdateSetting('mobileVideoPoster', e.target.value)}
+                                      placeholder="https://.../mobile-poster.jpg"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <label className="block text-xs text-white/70 mb-1">Video Banner Click Link (Optional)</label>
+                                  <Input
+                                    type="text"
+                                    value={String(settings.videoLinkUrl || '')}
+                                    onChange={(e) => handleUpdateSetting('videoLinkUrl', e.target.value)}
+                                    placeholder="/contact or https://..."
+                                  />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2 text-xs pt-1">
                                   <label className="flex items-center gap-2 text-white/70 cursor-pointer">
                                     <input
                                       type="checkbox"
@@ -1114,39 +1399,190 @@ export default function PageBuilderPage({ params }: { params: Promise<{ id: stri
                               </div>
                             )}
 
-                            {/* Dynamic Checklist Editor */}
-                            <div className="space-y-2 pt-2">
-                              <div className="flex items-center justify-between">
-                                <label className="text-xs font-semibold text-white/70">
-                                  Key Bullet Points / Guarantee Checklist ({checklistItems.length})
-                                </label>
-                                <Button variant="ghost" size="sm" onClick={handleAddChecklistItem} className="h-7 text-xs text-[#D9F45F]">
-                                  <Plus className="w-3 h-3 mr-1" /> Add Point
-                                </Button>
-                              </div>
-                              <div className="space-y-2">
-                                {checklistItems.map((item, idx) => (
-                                  <div key={idx} className="flex items-center gap-2">
-                                    <Input
-                                      type="text"
-                                      value={item}
-                                      onChange={(e) => handleUpdateChecklistItem(idx, e.target.value)}
-                                      placeholder="Checklist point..."
-                                      className="text-xs py-1.5"
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={() => handleRemoveChecklistItem(idx)}
-                                      className="p-1.5 rounded-lg text-rose-400 hover:bg-rose-500/10 transition"
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
+                            {/* 4. SPLIT CONTENT RIGHT SIDE MEDIA CONFIGURATION */}
+                            {layoutMode === 'split-content' && (
+                              <div className="p-3.5 rounded-xl bg-[#151414] border border-[#2A2B28] space-y-4">
+                                <div className="flex items-center justify-between pb-2 border-b border-[#2A2B28]">
+                                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                                    <Layers className="w-3.5 h-3.5 text-[#D9F45F]" /> Right Side Media Type
                                   </div>
-                                ))}
-                              </div>
-                            </div>
+                                </div>
 
-                            {/* Secondary Buttons & Social Proof */}
+                                <div>
+                                  <label className="block text-xs font-semibold text-white/70 mb-1">
+                                    Choose Right Side Media
+                                  </label>
+                                  <select
+                                    value={settings.mediaType || 'badge-card'}
+                                    onChange={(e) => handleUpdateSetting('mediaType', e.target.value)}
+                                    className="w-full px-3 py-2 rounded-xl bg-[#1C1B1B] border border-[#2A2B28] text-white text-xs focus:outline-none focus:border-[#D9F45F]"
+                                  >
+                                    <option value="image">Custom Showcase Image (Full Width)</option>
+                                    <option value="video">Cross-Browser HTML5 Video Player</option>
+                                    <option value="badge-card">Silwasa Tech Badge Card</option>
+                                  </select>
+                                </div>
+
+                                {/* Custom Showcase Image Options */}
+                                {settings.mediaType === 'image' && (
+                                  <div className="space-y-3 pt-1">
+                                    <div>
+                                      <label className="block text-xs text-white/70 mb-1">
+                                        Desktop Showcase Image URL * (Full Width in Column)
+                                      </label>
+                                      <Input
+                                        type="text"
+                                        value={String(settings.rightImageUrl || settings.imageUrl || '')}
+                                        onChange={(e) => {
+                                          handleUpdateSetting('rightImageUrl', e.target.value);
+                                          handleUpdateSetting('imageUrl', e.target.value);
+                                        }}
+                                        placeholder="https://images.unsplash.com/..."
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs text-white/70 mb-1">
+                                        Mobile Showcase Image URL (Optional - Fallback to desktop)
+                                      </label>
+                                      <Input
+                                        type="text"
+                                        value={String(settings.rightImageMobileUrl || '')}
+                                        onChange={(e) => handleUpdateSetting('rightImageMobileUrl', e.target.value)}
+                                        placeholder="https://images.unsplash.com/... (optional)"
+                                      />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                      <div>
+                                        <label className="block text-xs text-white/70 mb-1">Image Alt Text</label>
+                                        <Input
+                                          type="text"
+                                          value={String(settings.rightImageAlt || settings.imageAlt || '')}
+                                          onChange={(e) => handleUpdateSetting('rightImageAlt', e.target.value)}
+                                          placeholder="Alt description"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-xs text-white/70 mb-1">Image Click Link (Optional)</label>
+                                        <Input
+                                          type="text"
+                                          value={String(settings.rightImageLink || '')}
+                                          onChange={(e) => handleUpdateSetting('rightImageLink', e.target.value)}
+                                          placeholder="/portfolio or https://..."
+                                        />
+                                      </div>
+                                    </div>
+                                    <p className="text-[11px] text-white/40 italic">
+                                      Showcase image renders full width within the right column with responsive rounded corners and subtle hover zoom.
+                                    </p>
+                                  </div>
+                                )}
+
+                                {/* Video Options */}
+                                {settings.mediaType === 'video' && (
+                                  <div className="space-y-3 pt-1">
+                                    <div>
+                                      <label className="block text-xs text-white/70 mb-1">MP4 / WebM Video URL *</label>
+                                      <Input
+                                        type="text"
+                                        value={String(settings.videoUrl || '')}
+                                        onChange={(e) => handleUpdateSetting('videoUrl', e.target.value)}
+                                        placeholder="https://.../video.mp4"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs text-white/70 mb-1">Video Poster / Thumbnail URL</label>
+                                      <Input
+                                        type="text"
+                                        value={String(settings.videoPoster || '')}
+                                        onChange={(e) => handleUpdateSetting('videoPoster', e.target.value)}
+                                        placeholder="https://.../thumbnail.jpg"
+                                      />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                      <label className="flex items-center gap-2 text-white/70 cursor-pointer">
+                                        <input
+                                          type="checkbox"
+                                          checked={settings.videoAutoplay !== false}
+                                          onChange={(e) => handleUpdateSetting('videoAutoplay', e.target.checked)}
+                                          className="rounded"
+                                        />
+                                        <span>Autoplay</span>
+                                      </label>
+                                      <label className="flex items-center gap-2 text-white/70 cursor-pointer">
+                                        <input
+                                          type="checkbox"
+                                          checked={settings.videoMuted !== false}
+                                          onChange={(e) => handleUpdateSetting('videoMuted', e.target.checked)}
+                                          className="rounded"
+                                        />
+                                        <span>Muted</span>
+                                      </label>
+                                      <label className="flex items-center gap-2 text-white/70 cursor-pointer">
+                                        <input
+                                          type="checkbox"
+                                          checked={settings.videoLoop !== false}
+                                          onChange={(e) => handleUpdateSetting('videoLoop', e.target.checked)}
+                                          className="rounded"
+                                        />
+                                        <span>Loop Playback</span>
+                                      </label>
+                                      <label className="flex items-center gap-2 text-white/70 cursor-pointer">
+                                        <input
+                                          type="checkbox"
+                                          checked={Boolean(settings.videoControls)}
+                                          onChange={(e) => handleUpdateSetting('videoControls', e.target.checked)}
+                                          className="rounded"
+                                        />
+                                        <span>Show Controls</span>
+                                      </label>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Badge Card Info */}
+                                {settings.mediaType === 'badge-card' && (
+                                  <p className="text-[11px] text-white/50 italic p-2.5 rounded-lg bg-[#1C1B1B] border border-[#2A2B28]">
+                                    Displays the signature Silwasa IT Solutions geometric brand badge card with glowing ambient backdrop.
+                                  </p>
+                                )}
+                              </div>
+                            )}
+
+                            {/* 5. DYNAMIC CHECKLIST (For split-content & content-only) */}
+                            {(layoutMode === 'split-content' || layoutMode === 'content-only') && (
+                              <div className="space-y-2 pt-2">
+                                <div className="flex items-center justify-between">
+                                  <label className="text-xs font-semibold text-white/70">
+                                    Key Bullet Points / Guarantee Checklist ({checklistItems.length})
+                                  </label>
+                                  <Button variant="ghost" size="sm" onClick={handleAddChecklistItem} className="h-7 text-xs text-[#D9F45F]">
+                                    <Plus className="w-3 h-3 mr-1" /> Add Point
+                                  </Button>
+                                </div>
+                                <div className="space-y-2">
+                                  {checklistItems.map((item, idx) => (
+                                    <div key={idx} className="flex items-center gap-2">
+                                      <Input
+                                        type="text"
+                                        value={item}
+                                        onChange={(e) => handleUpdateChecklistItem(idx, e.target.value)}
+                                        placeholder="Checklist point..."
+                                        className="text-xs py-1.5"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveChecklistItem(idx)}
+                                        className="p-1.5 rounded-lg text-rose-400 hover:bg-rose-500/10 transition"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* 6. SECONDARY BUTTONS & SOCIAL PROOF */}
                             <div className="grid grid-cols-2 gap-3 pt-2">
                               <div>
                                 <label className="block text-xs font-semibold text-white/70 mb-1">WhatsApp CTA Link</label>
